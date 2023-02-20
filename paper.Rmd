@@ -1,1 +1,21 @@
+---
+title: "Lab1 Writeup"
+output: html_document
+date: "2023-02-19"
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Summary:
+
+  Our guiding question was determining if there was some relationship between minutes played, 3-point field goal percent, and total points scored for an individual player. This goal digs into the heart of modern basketball as superstars remain on the court for long periods of time, seeking to score as many three point baskets as possible. Determining if this is the most effective way to win games is the primary focus of our data exploration. As our goal focused on the performance and statistics associated with a single player, we seperated the chosen players and their relevant stats from the larger dataset. We chose to use LeBron James, Trae Young, Stephen Curry, Blake Griffin, Jayson Tatum, and Kevin Durant for our analysis. These players range in position, 3-point attempts, and minutes played, but at one point were leading scorers for their team. All personal statistics were taken for each of these players and then new smaller sets were made. For our analysis, we ended up using the minutes player, 3 point percent, and total points variables as they most closely aligned with our goal. The codebook states that these variable all mean exactly what they appear to mean. Minutes played was a numeric value that represented minutes. 3 point percent was the percentage of scroed 3 point shots. Total points was the amount of points an individual scored in a game. This data was very well kept and had no missing values, making the cleaning portion far simpler than it otherwise could have been. Essentially, the large dataset was parred down into a smaller set, featuring only the listed players and the three previously mentioned variables. As expected, more minutes and a higher 3-point percentage typically resulted in more points, even for the players who are less dependent on 3-point shots. 
+  
+Data:
+  
+  Players:
+  
+  fg3_pct:
+  
+  minutes:
