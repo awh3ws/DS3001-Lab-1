@@ -27,14 +27,22 @@ library(tidyverse)
 #Clean Data
 
 #Remove unecessecary columns
-df1 <- df[,c(22:24,26:34,43,63)]
+df1 <- df[,c(5,22:24,26:34,43,63)]
 df1$starter <- as.factor(df1$starter)
 
 #Create another dataset with League Average (each person only has 1 row)
-df2 <- df1[,c(1,3:5,7:8,10:11,13:14)]
-df2$player <- as.factor(df2$player)
+league <- df1 %>%
+  group_by(player, Team_Abbrev, starter) %>%
+  summarize(fg3 = mean(fg3),
+            fg3a = mean(fg3a),
+            fg3_pct = fg3/fg3a,
+            pts = mean(pts),
+            minutes = mean(minutes))
 
-#Players dataframes
+na.omit(league) #Gets rid of players with 0 3 point attempts bc 0/0 = NA
+
+
+#Players data frames
 player_Lebron <- df1[which(df$player_id == "jamesle01"),]
 player_Durant <- df1[which(df$player_id == "duranke01"),]
 player_Young <- df1[which(df$player_id == "youngtr01"),]
@@ -52,13 +60,13 @@ player_Curry <- df1[which(df$player_id == "curryst01"),]
 #Plot the Data
 
 #League
-ggplot(df1, aes(x = fg3_pct, y = minutes, shape = starter, group = player))+
+ggplot(league, aes(x = fg3_pct, y = minutes, shape = starter, color = Team_Abbrev ))+
   geom_point(size = 5, alpha = .75)+
   theme_bw()+
-  geom_smooth(method="lm", se = FALSE, color = 'black')+
   labs(title = "NBA League", subtitle = "By Player")+
   xlab("3 Point Percentage")+
   ylab("Minutes per Game")
+  
   
   
   
