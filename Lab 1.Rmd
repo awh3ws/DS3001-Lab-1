@@ -1,0 +1,381 @@
+---
+title: "Lab 1"
+author: "Andrew Holzwarth"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Andrew Holzwarth, Brian Bippert, Felipe Martinez, Garrett Burroughs, Tyler Lynch
+
+## DS 3001: Programming Lab 1
+
+## Summary
+Our guiding question was determining if there was some relationship between minutes played, 3-point field goal percent, and total points scored for an individual player. This goal digs into the heart of modern basketball as superstars remain on the court for long periods of time, seeking to score as many 3-point baskets as possible. As our goal focused on the performance and statistics associated with a single player, we separated the chosen players and their relevant stats from the larger dataset. We chose to use **LeBron James**, **Trae Young**, **Stephen Curry**, **Blake Griffin**, **Jayson Tatum**, and **Kevin Durant** for our analysis. These players range in position, 3-point attempts, and minutes played, and are at different stages of their careers. All personal statistics were taken for each of these players and then new smaller sets were made. For our analysis, we ended up using the minutes played, 3 point percent, and total points variables as they most closely aligned with our goal. Essentially, the large dataset was pared down into a smaller set, featuring only the listed players and the three previously mentioned variables. Scatterplots of these variables were made in order to find trends within the data. As expected, more minutes and a higher 3-point percentage typically resulted in more points, even for the players who are less dependent on 3-point shots. Furthermore, a league average scatter plot was made that looks at each team with respect to the NBA as a whole. This plot exhibited similar trends, with teams averaging a higher 3-point percent typically scoring more points in each game. The results of our analysis seem to indicate the more 3-point shots and the longer a star player can remain on the court means more points.
+
+***
+
+## Data
+* `player`:
+We chose to focus on six players for our analysis: LeBron James, Trae Young, Stephen Curry, Blake Griffin, Jayson Tatum, and Kevin Durant. These players were all taken from the dataset by the player variable. Each player represents a different category across body types, shooting styles, and positions. One thing that these players all have in common is that they were at one point league powerhouses that dominated the court. By comparing these players, a meaningful summary of the relationship between players' statistics can be found.
+
+* `fg3_pct`:
+Perhaps the most vital portion of our analysis, this variable is the **percentage of 3-point shots made per 3-point shot attempt**. This is stored as a decimal with three significant figures. 
+
+* `minutes`:
+Minutes played was a numeric value that represented the **minutes that an individual player was on the court**. Our goal is to see if this variable is dependent on `fg3_pct` and `pts` for each individual player. This variable was not considered while looking at the league as a whole as each team had five players on the court at all times.
+
+* `pts`:
+The **number of points scored by an individual in a single game**. This variable was placed into the context of 3-point shots as the NBA has become increasingly focused on 3-point shooting. 
+
+* `Team_Abbrev`:
+The **abbreviation for each team in three letters**. This was used to label our league averages graph. Looking at each team in the scope of the NBA allows further analysis to be done on the effectiveness of the 3-point shot.
+
+* `Team_Score`:
+The **number of points a team scored in a given game**. These were averaged for each team across our time frame, which was three seasons worth of games. 
+
+Data wrangling and manipulation was straightforward for this dataset. There were no `NA` values in the dataset, so our wrangling was focused on removing unnecessary variables and condensing the rows based on `Team_Abbrev` for the league data-frame. For the individual player data-frames, the only manipulation needed was to restrict the specific variables needed for our analysis and to use the `which()` function to grab only the specific player we were interested in analyzing. The league data-frame required more intense manipulation using the `dplyr` package. By grouping by `Team_Abbrev` and summarizing variables to get league averages, the `dplyr` package condensed the manipulation to a few lines of code. Our reason for averaging all of the league statistics was because there would be around 2,500 data points per season if each score from each team was plotted for each game. This is far too many to analyze meaningfully. Averaging the data and making each team have one data point also removes outliers where a team would play a significantly better team and score far fewer points than they do on average. Overall, cleaning and analysis of these variables was very easy as all values were present, well-documented, and within expectations.
+
+***
+
+## Results
+When initially conducting our analysis, our plan was to visualize the overall league trends to see if there was a strong correlation between a team's 3-point percentage and the average total points that the team scores. When looking at the chart (*Exhibit 1*), the trendline appears to be sloped at 30 degrees upward, but the scaling of the axis is important to note. All 30 teams had 3-point percentages between 34% and 39% and each team scored between 105 and 117.5 points per game. With the league averages being relatively compact, we realized that each team implemented a similar strategy of trying to make as many 3-pointers as possible to achieve a higher score. In the era of Steph Curry, 3-pointers have become more popular and more of a cultural trend.
+
+### League overview:
+```{r, include = FALSE}
+#Read in the data
+df <- read.csv('/Users/andrewholzwarth/Desktop/DS 3001/ASA Heat Check Data (2).csv')
+
+#Import necessary packages
+library(tidyverse)
+
+#Create another data set with League Average (each Team only has 1 row)
+  #Using the dplyr package (within tidyverse) to restrict the data frame and summarize variables
+league <- df %>%
+  group_by(Team_Abbrev) %>% #grouping by team abbreviation
+  summarize(Team_Score = mean(Team_Score), #averaging the team score per game
+            fg3 = mean(fg3), #averaging the 3-point shots made per game
+            fg3a = mean(fg3a), #Averaging the 3-point shot attempts per game
+            fg3_pct = fg3/fg3a) #calculating the 3-point percentage per team
+
+na.omit(league) #Gets rid of players with 0 3 point attempts because 0/0 = NA
+
+# Players data frames
+# Remove unnecessary columns
+df1 <- df[,c(5,22:24,26:34,43,63)]
+df1$starter <- as.factor(df1$starter)
+
+#make a data frame for each player based on df1
+  #sorted using the which() function based on player_id
+player_Lebron <- df1[which(df$player_id == "jamesle01"),]
+player_Durant <- df1[which(df$player_id == "duranke01"),]
+player_Young <- df1[which(df$player_id == "youngtr01"),]
+player_Griffin <- df1[which(df$player_id == "griffbl01"),]
+player_Tatum <- df1[which(df$player_id == "tatumja01"),]
+player_Curry <- df1[which(df$player_id == "curryst01"),]
+```
+
+```{r, echo = FALSE, message = FALSE}
+#League Graph
+ggplot(league, aes(x = fg3_pct, y = Team_Score, color = Team_Abbrev, label = Team_Abbrev))+
+  geom_point(size = 6.5, alpha = .50)+ #Make a scatter plot with larger than normal points and slightly see through becuase some data points overlap
+  theme_bw()+
+  labs(title = "NBA League", subtitle = "By Team")+ #Label the graph
+  geom_text(color="black", size=2) + #label each data point with the team abbreviation
+  xlab("3 Point Percentage")+ #label the x-axis
+  ylab("Team Score per Game") #label the y-axis
+```
+
+
+In the NBA, most teams are clustered very centrally around the middle, which makes sense for a sports league. These middling teams average around 112 points a game and are between 0.35-0.37 percent 3-point shooting. There appear to be four teams that score less and have lower 3-point percentages than the other teams, Oklahoma City Thunder, Cleveland Cavaliers, Detroit Pistons, and the Orlando Magic. All four of these teams did poorly last season, which further confirms our hypothesis that a higher 3-point percentage and a higher team score leads to more wins. 
+
+### Player Analysis:
+Since the league averages were within a narrow range, we decided to look at a few different players that cover a wide range of body types, shooting styles, and positions. One thing that these players all have in common is that they were, at one point, league powerhouses that dominated the court. The players that we chose were **LeBron James**, **Trae Young**, **Stephen Curry**, **Blake Griffin**, **Jayson Tatum**, and **Kevin Durant**. Unexpectedly, 3-point percentage did not always determine the number of minutes each player played each game. On each graph we added a tertiary variable, points scored in each game, as the data point color to see if that had an impact on the analysis. The typical trend observed was that most players played relatively the same minutes per game regardless of 3-point percentage. The two players that appeared to have the furthest opposite trends, although still similar, were **LeBron James** and **Stephen Curry**.
+
+
+#### LeBron James
+LeBron James is a power forward on the Los Angeles Lakers and is one of the best NBA players of all time. When looking at the scatterplot (*Exhibit 2*), his trendline is sloped downward slightly, but most of the games he plays are between 25 and 40 minutes-- regardless of his 3-point percentage. As for his points per game, his minutes per game appears to not have much of an impact because he has high and low scoring games between the same 25-40 minute range as the 3-point percentage. Comparing the points per game to 3-point percentage, a trend appears where the higher the 3-point percentage, the more points scored. This correlation makes sense. If you are making more shots than average, then you would expect the player to score more points that game than on average. Additionally, since the points are on a blue-gray-red scale, LeBron’s point distribution is mainly gray, which means that he scored close to his average score each game and does not have many outliers in either direction.
+
+```{r, echo = FALSE, message = FALSE}
+#LeBron James Graph
+mid <- mean(player_Lebron$pts) #calculate the average number of points Lebron scores in a game
+ggplot(player_Lebron, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+ #Make a scatterplot
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Lebron James")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+	
+#### Stephen Curry
+Stephen Curry is a point guard for the Golden State Warriors and is the best 3-point shooter of all time. When looking at the scatterplot (*Exhibit 3*), his trend is slightly different than LeBron’s. He still plays between 25-40 minutes per game, but his trendline between 3-point percentage and minutes played is more upward sloping, which means that a higher 3-point percentage correlates with more minutes played in that specific game. When looking at the points overlaid on the graph, his trend is similar to LeBron’s in that the higher the 3-point percentage, the more points Steph scores that game. 
+
+```{r, echo = FALSE, message = FALSE}
+#Steph Curry Graph
+mid <- mean(player_Curry$pts) #calculate the average number of points Steph Curry scores in a game
+ggplot(player_Curry, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Steph Curry")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+
+***
+
+## Conclusion
+After performing an exploratory analysis of the dataset, we came to a few conclusions about the correlation between different player statistics in the NBA. Mainly, a higher 3-point percentage does not have a strong correlation with minutes played. Each player played roughly the same range of time per game regardless of their 3-point percentage. Additionally, there seems to be a strong correlation between 3-point percentage and points scored. That correlation makes sense because 3-pointers are the highest scoring shot in basketball and if you make a higher percentage of those shots, then you will score more points.
+    
+Some concerns that need to be addressed regarding our project include the six specific players that we chose and only focusing on the 2019-2022 seasons. We chose those 6 players for a specific reason. Lebron James because he is a power forward and one of the best players of all time, Stephen Curry because he is the best 3-point shooter of all time, Jayson Tatum and Trae Young because they are younger players, Kevin Durant because he is a power forward and could be compared to Lebron, and Blake Griffin because he is an older player that is at the end of his career. By only focusing on the 2019-2022 seasons, we are able to see current trends within the data. Since the NBA is becoming a 3-point predominant league, we wanted to focus on more recent data than data from the 1900s or early 2000s. An interesting analysis to conduct would be to track league 3-point percentage data over decades of data with a different data set.
+
+Additional work outside of the project that could be conducted either on this data set or another more expansive collection of data would include work assessing the win rate of teams and players that shoot more three-point shots. Typically players like Stephen Curry make up the majority of his team's points, meaning that if his shooting percentage is down, his team is significantly less likely to win. This stands in opposition with players like LeBron James, who is generally mixed, making a more equal amount of two-point and three-point attempts. Analyzing which of these styles leads to more wins or a greater amount of consistency would further display the efficacy of the data that we found. Our findings speak to the performance of a player in terms of points and three-point percentage in terms of minutes played. This only tells half of the story as these high scoring players tend to be less active on defense. These increased minutes may take away from more defensive-oriented players, potentially causing these teams to score more points, but also concede more points. Analyzing this relationship would drastically increase the effectiveness of our findings if coaches or even players wanted to apply our findings. Our data only scratches the surface of the relationship between three-point shots and success in the modern NBA, opening the door for more research.
+
+***
+
+## Appendix
+
+* `Exhibit 1: League Graph By Team`
+```{r, echo = FALSE, message = FALSE}
+ggplot(league, aes(x = fg3_pct, y = Team_Score, color = Team_Abbrev, label = Team_Abbrev, group = Team_Abbrev))+
+  geom_point(size = 6.5, alpha = .50)+ #Make a scatter plot with larger than normal points and slightly see through becuase some data points overlap
+  theme_bw()+
+  labs(title = "NBA League", subtitle = "By Team")+ #Label the graph
+  geom_smooth(method="lm", se = FALSE, color = 'black')+
+  geom_text(color="black", size=2) + #label each data point with the team abbreviation
+  xlab("3 Point Percentage")+ #label the x-axis
+  ylab("Team Score per Game") #label the y-axis
+```
+
+* `Exhibit 2: Lebron James Graph`
+```{r, echo = FALSE, message = FALSE}
+#LeBron James Graph
+mid <- mean(player_Lebron$pts) #calculate the average number of points Lebron scores in a game
+ggplot(player_Lebron, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+ #Make a scatterplot
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Lebron James")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+* `Exhibit 3: Steph Curry Graph`
+```{r, echo = FALSE, message = FALSE}
+#Steph Curry Graph
+mid <- mean(player_Curry$pts) #calculate the average number of points Steph Curry scores in a game
+ggplot(player_Curry, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Steph Curry")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+* `Exhibit 4: Kevin Durant Graph`
+```{r, echo = FALSE, message = FALSE}
+#Kevin Durant Graph
+mid <- mean(player_Durant$pts) #calculate the average number of points KD scores in a game
+ggplot(player_Durant, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Kevin Durant")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+* `Exhibit 5: Trae Young Graph`
+```{r, echo = FALSE, message = FALSE}
+#Trae Young Graph
+mid <- mean(player_Young$pts) #calculate the average number of points Trae Young scores in a game
+ggplot(player_Young, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Trae Young")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+* `Exhibit 6: Blake Griffin Graph`
+```{r, echo = FALSE, message = FALSE}
+#Blake Griffin Graph
+mid <- mean(player_Griffin$pts) #calculate the average number of points Blake Griffin scores in a game
+ggplot(player_Griffin, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Blake Griffin")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+* `Exhibit 7: Jayson Tatum Graph`
+```{r, echo = FALSE, message = FALSE}
+#Jayson Tatum Graph
+mid <- mean(player_Tatum$pts) #calculate the average number of points Jason Tatum scores in a game
+ggplot(player_Tatum, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Jayson Tatum")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+* `Exhibit 8: First 6 Rows of df1`
+```{r, echo = FALSE}
+head(df1)
+```
+
+* `Exhibit 9: Summary Statistics of df1`
+```{r, echo = FALSE}
+summary(df1)
+```
+
+```{r, include = FALSE}
+# import data
+df <- read.csv('/Users/andrewholzwarth/Desktop/DS 3001/ASA Heat Check Data (2).csv')
+
+# install packages
+library(tidyverse)
+```
+
+```{r, include - FALSE}
+#Clean Data
+
+#Create another data set with League Average (each Team only has 1 row)
+  #Using the dplyr package (within tidyverse) to restrict the data frame and summarize variables
+league <- df %>%
+  group_by(Team_Abbrev) %>% #grouping by team abbreviation
+  summarize(Team_Score = mean(Team_Score), #averaging the team score per game
+            fg3 = mean(fg3), #averaging the 3-point shots made per game
+            fg3a = mean(fg3a), #Averaging the 3-point shot attempts per game
+            fg3_pct = fg3/fg3a) #calculating the 3-point percentage per team
+
+na.omit(league) #Gets rid of players with 0 3 point attempts because 0/0 = NA
+
+
+# Players data frames
+# Remove unnecessary columns
+df1 <- df[,c(5,22:24,26:34,43,63)]
+df1$starter <- as.factor(df1$starter)
+
+#make a data frame for each player based on df1
+  #sorted using the which() function based on player_id
+player_Lebron <- df1[which(df$player_id == "jamesle01"),]
+player_Durant <- df1[which(df$player_id == "duranke01"),]
+player_Young <- df1[which(df$player_id == "youngtr01"),]
+player_Griffin <- df1[which(df$player_id == "griffbl01"),]
+player_Tatum <- df1[which(df$player_id == "tatumja01"),]
+player_Curry <- df1[which(df$player_id == "curryst01"),]
+```
+
+
+
+```{r, include = FALSE}
+
+#League
+ggplot(league, aes(x = fg3_pct, y = Team_Score, color = Team_Abbrev, label = Team_Abbrev))+
+  geom_point(size = 6.5, alpha = .50)+ #Make a scatter plot with larger than normal points and slightly see through becuase some data points overlap
+  theme_bw()+
+  labs(title = "NBA League", subtitle = "By Team")+ #Label the graph
+  geom_smooth(method="lm", se = FALSE, color = 'black')+
+  geom_text(color="black", size=2) + #label each data point with the team abbreviation
+  xlab("3 Point Percentage")+ #label the x-axis
+  ylab("Team Score per Game") #label the y-axis
+
+  
+  
+  
+
+#LeBron James Graph
+mid <- mean(player_Lebron$pts) #calculate the average number of points Lebron scores in a game
+ggplot(player_Lebron, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+ #Make a scatterplot
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Lebron James")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Kevin Durant Graph
+mid <- mean(player_Durant$pts) #calculate the average number of points KD scores in a game
+ggplot(player_Durant, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Kevin Durant")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Trae Young Graph
+mid <- mean(player_Young$pts) #calculate the average number of points Trae Young scores in a game
+ggplot(player_Young, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Trae Young")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Blake Griffin Graph
+mid <- mean(player_Griffin$pts) #calculate the average number of points Blake Griffin scores in a game
+ggplot(player_Griffin, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Blake Griffin")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Jayson Tatum Graph
+mid <- mean(player_Tatum$pts) #calculate the average number of points Jason Tatum scores in a game
+ggplot(player_Tatum, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Jayson Tatum")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Steph Curry Graph
+mid <- mean(player_Curry$pts) #calculate the average number of points Steph Curry scores in a game
+ggplot(player_Curry, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Steph Curry")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+
+
+
+
+
+
+
