@@ -1,0 +1,48 @@
+---
+title: "DS 3001: Programming Lab 1"
+output: html_document
+date: "20 February, 2023"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Andrew Holzwarth, Brian Bippert, Felipe Martinez, Garrett Burroughs, Tyler Lynch  
+
+## Summary
+Our guiding question was determining if there was some relationship between minutes played, 3-point field goal percent, and total points scored for an individual player. This goal digs into the heart of modern basketball as superstars remain on the court for long periods of time, seeking to score as many three point baskets as possible. As our goal focused on the performance and statistics associated with a single player, we separated the chosen players and their relevant stats from the larger dataset. We chose to use **LeBron James**, **Trae Young**, **Stephen Curry**, **Blake Griffin**, **Jayson Tatum**, and **Kevin Durant** for our analysis. These players range in position, 3-point attempts, and minutes played, and are at different stages of their careers. All personal statistics were taken for each of these players and then new smaller sets were made. For our analysis, we ended up using the minutes played, 3 point percent, and total points variables as they most closely aligned with our goal. Essentially, the large dataset was pared down into a smaller set, featuring only the listed players and the three previously mentioned variables. Scatterplots of these variables were made in order to find trends within the data. As expected, more minutes and a higher 3-point percentage typically resulted in more points, even for the players who are less dependent on 3-point shots. Furthermore, a league average scatter plot was made that looks at each team with respect to the NBA as a whole. This plot exhibited similar trends, with teams averaging a higher three-point percent typically scoring more points in each game. The results of our analysis seem to indicate the more three-point shots and the longer a star player can remain on the court means more points.
+
+***
+
+## Data
+* `player`:
+We chose to focus on six players for our analysis: LeBron James, Trae Young, Stephen Curry, Blake Griffin, Jayson Tatum, and Kevin Durant. These players were all taken from the dataset by the player variable. Each player represents a different category across body types, shooting styles, and positions. One thing that these players all have in common is that they were at one point league powerhouses that dominated the court. By comparing these players, a meaningful summary of the relationship between players' statistics can be found.
+
+* `fg3_pct`:
+Perhaps the most vital portion of our analysis, this variable is the **percentage of three-point shots made per three-point shot attempt**. This is stored as a decimal with three significant figures. 
+
+* `minutes`:
+Minutes played was a numeric value that represented the **minutes that an individual player was on the court**. Our goal is to see if this variable is dependent on `fg3_pct` and `pts` for each individual player. This variable was not considered while looking at the league as a whole as each team had five players on the court at all times.
+
+* `pts`:
+The **number of points scored by an individual in a single game**. This variable was placed into the context of three-point shots as the NBA has become increasingly focused on three-point shooting. 
+
+* `Team_Abbrev`:
+The **abbreviation for each team in three letters**. This was used to label our league averages graph. Looking at each team in the scope of the NBA allows further analysis to be done on the effectiveness of the three-point shot.
+
+* `Team_Score`:
+The **number of points a team scored in a given game**. These were averaged for each team across our time frame, which was three seasons worth of games. 
+
+Data wrangling and manipulation was straightforward for this dataset. There were no `NA` values in the dataset, so our wrangling was focused on removing unnecessary variables and condensing the rows based on `Team_Abbrev` for the league data-frame. For the individual player data-frames, the only manipulation needed was to restrict the specific variables needed for our analysis and to use the `which()` function to grab only the specific player we were interested in analyzing. The league data-frame required more intense manipulation using the `dplyr` package. By grouping by `Team_Abbrev` and summarizing variables to get league averages, the `dplyr` package condensed the manipulation to a few lines of code. Our reason for averaging all of the league statistics was because there would be around 2,500 data points per season if each score from each team was plotted for each game. This is far too many to analyze meaningfully. Averaging the data and making each team have one data point also removes outliers where a team would play a significantly better team and score far fewer points than they do on average. Overall, cleaning and analysis of these variables was very easy as all values were present, well-documented, and within expectations.
+
+***
+
+## Results
+
+***
+
+## Conclusion
+
+***
+
+## Appendix
