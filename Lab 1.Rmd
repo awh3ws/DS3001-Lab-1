@@ -1,0 +1,145 @@
+---
+title: "Lab 1"
+author: "Andrew Holzwarth"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Research Questions
+  # Are ppg and minutes played related between certain players or on a league level?
+```
+
+
+```{r}
+# import data
+df <- read.csv('/Users/andrewholzwarth/Desktop/DS 3001/ASA Heat Check Data (2).csv')
+
+# install packages
+library(tidyverse)
+```
+
+```{r}
+#Clean Data
+
+#Create another data set with League Average (each Team only has 1 row)
+  #Using the dplyr package (within tidyverse) to restrict the data frame and summarize variables
+league <- df %>%
+  group_by(Team_Abbrev) %>% #grouping by team abbreviation
+  summarize(Team_Score = mean(Team_Score), #averaging the team score per game
+            fg3 = mean(fg3), #averaging the 3-point shots made per game
+            fg3a = mean(fg3a), #Averaging the 3-point shot attempts per game
+            fg3_pct = fg3/fg3a) #calculating the 3-point percentage per team
+
+na.omit(league) #Gets rid of players with 0 3 point attempts because 0/0 = NA
+
+
+# Players data frames
+# Remove unnecessary columns
+df1 <- df[,c(5,22:24,26:34,43,63)]
+df1$starter <- as.factor(df1$starter)
+
+#make a data frame for each player based on df1
+  #sorted using the which() function based on player_id
+player_Lebron <- df1[which(df$player_id == "jamesle01"),]
+player_Durant <- df1[which(df$player_id == "duranke01"),]
+player_Young <- df1[which(df$player_id == "youngtr01"),]
+player_Griffin <- df1[which(df$player_id == "griffbl01"),]
+player_Tatum <- df1[which(df$player_id == "tatumja01"),]
+player_Curry <- df1[which(df$player_id == "curryst01"),]
+```
+
+```{r}
+#Plot the Data
+
+#League
+ggplot(league, aes(x = fg3_pct, y = Team_Score, color = Team_Abbrev, label = Team_Abbrev))+
+  geom_point(size = 6.5, alpha = .50)+ #Make a scatter plot with larger than normal points and slightly see through becuase some data points overlap
+  theme_bw()+
+  labs(title = "NBA League", subtitle = "By Team")+ #Label the graph
+  geom_text(color="black", size=2) + #label each data point with the team abbreviation
+  xlab("3 Point Percentage")+ #label the x-axis
+  ylab("Team Score per Game") #label the y-axis
+
+  
+  
+  
+
+#LeBron James Graph
+mid <- mean(player_Lebron$pts) #calculate the average number of points Lebron scores in a game
+ggplot(player_Lebron, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+ #Make a scatterplot
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Lebron James")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Kevin Durant Graph
+mid <- mean(player_Durant$pts) #calculate the average number of points KD scores in a game
+ggplot(player_Durant, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Kevin Durant")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Trae Young Graph
+mid <- mean(player_Young$pts) #calculate the average number of points Trae Young scores in a game
+ggplot(player_Young, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Trae Young")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Blake Griffin Graph
+mid <- mean(player_Griffin$pts) #calculate the average number of points Blake Griffin scores in a game
+ggplot(player_Griffin, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Blake Griffin")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Jason Tatum Graph
+mid <- mean(player_Tatum$pts) #calculate the average number of points Jason Tatum scores in a game
+ggplot(player_Tatum, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Jason Tatum")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+
+#Steph Curry Graph
+mid <- mean(player_Curry$pts) #calculate the average number of points Steph Curry scores in a game
+ggplot(player_Curry, aes(x = fg3_pct, y = minutes))+
+  geom_point(aes(color = pts), size = 5, alpha = .75)+
+  scale_color_gradient2(midpoint = mid, low = 'blue', mid = 'grey', high = 'red')+ #set the color scale for points to be a gradient
+  theme_bw()+
+  geom_smooth(method="lm", se = FALSE, color = 'black')+ # adds a trendline to see direction of points
+  labs(title = "Steph Curry")+
+  xlab("3 Point Percentage")+
+  ylab("Minutes per Game")
+```
+
+
+
+
+
+
+
+
