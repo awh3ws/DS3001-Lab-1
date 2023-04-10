@@ -1,9 +1,65 @@
 ---
 title: 'Programming Lab #2'
-author: "Machine Learning 1"
-output: pdf_document
+author: "Brian Bippert"
+output:
+  html_document:
+    df_print: paged
 ---
 # Programming Lab 2
+
+
+```{r}
+
+df_test = read.csv("testing_data.csv")
+df_train = read.csv("training_data.csv")
+
+df_train = df_train[-c(1,2)]
+df_test = df_test[-c(1,2)]
+
+df_train$bmi = as.numeric(df_train$bmi)
+df_test$bmi = as.numeric(df_test$bmi)
+
+df_train = na.omit(df_train)
+df_test = na.omit(df_test)
+
+df_train$gender = ifelse(df_train$gender == "Male", 1, 0)
+df_train$ever_married = ifelse(df_train$ever_married == "Yes", 1.0, 0)
+df_train$Residence_type = ifelse(df_train$Residence_type == "Rural", 0.0, 1)
+df_train$smoked = ifelse(df_train$smoking_status == "formerly smoked" | df_train$smoking_status == "smokes", 1.0, 0)
+
+df_test$gender = ifelse(df_test$gender == "Male", 1, 0)
+df_test$ever_married = ifelse(df_test$ever_married == "Yes", 1.0, 0)
+df_test$Residence_type = ifelse(df_test$Residence_type == "Rural", 0.0, 1)
+df_test$smoked = ifelse(df_test$smoking_status == "formerly smoked" | df_test$smoking_status == "smokes", 1.0, 0)
+
+df_train$gluc = ifelse(df_train$avg_glucose_level > 190, 1, 0)
+df_train$old = ifelse(df_train$age > 69, 1 , 0)
+df_train$overbmi = ifelse(df_train$bmi > 20, 1, 0)
+df_train$og = ifelse(df_train$old == 1 & df_train$gluc == 1, 1, 0)
+df_train$b = ifelse(df_train$og == 1 & df_train$smoked == 1, 1, 0)
+
+
+
+df_test$gluc = ifelse(df_test$avg_glucose_level > 190, 1, 0)
+df_test$old = ifelse(df_test$age > 69, 1 , 0)
+df_test$overbmi = ifelse(df_test$bmi > 20, 1, 0)
+df_test$og = ifelse(df_test$old == 1 & df_test$gluc == 1, 1, 0)
+df_test$b = ifelse(df_test$og == 1 & df_test$smoked == 1, 1, 0)
+
+
+model = lm(stroke~.,data=df_train)
+test = predict(model, df_test)
+
+
+y_bar = mean(df_train$stroke)
+y_test = df_test$stroke
+TSS = sum( (y_test - y_bar)^2 ) 
+
+rtest = 1 - sum( (y_test - test)^2 )/TSS
+
+plot(test, df_test$stroke)
+```
+
 
   The purpose of this project is to build predictive algorithms that predict the likelihood a person has a stroke. The data include:
   
@@ -58,139 +114,3 @@ The project is graded based on four criteria:
   - Replication/Documentation: Is the code appropriately commented? Can the main results be replicated from the code and original data files? Are significant choices noted and explained?
 
 Each of the four criteria are equally weighted (25 points out of 100).
-
-
-```{r}
-#import data
-df_train <- read.csv("training_data.csv")
-df_test <- read.csv("testing_data.csv")
-
-#data wrangle
-df_train <- df_train[-c(1,2)]
-df_test <- df_test[-c(1,2)]
-
-df_train$bmi = as.numeric(df_train$bmi)
-df_test$bmi = as.numeric(df_test$bmi)
-
-df_train$gender <- ifelse(df_train$gender == "Male",1,0)
-df_train$ever_married <- ifelse(df_train$ever_married == "Yes",1,0)
-df_train$Residence_type <- ifelse(df_train$Residence_type == "Urban",1,0)
-
-df_test$gender <- ifelse(df_test$gender == "Male",1,0)
-df_test$ever_married <- ifelse(df_test$ever_married == "Yes",1,0)
-df_test$Residence_type <- ifelse(df_test$Residence_type == "Urban",1,0)
-
-df_train <- na.omit(df_train)
-df_test <- na.omit(df_test)
-
-
-summary(df_train)
-N = dim(df_train)[1] + dim(df_test)[1]
-```
-
-```{r}
-#Linear Model 1
-lazy_lm <- lm(stroke~.,data=df_train)
-summary(lazy_lm)
-
-y_hat_linear1 = predict.lm(lazy_lm,df_test)
-
-y_bar1 = mean(df_train$stroke) # Average value of training data outcomes
-y_test1 = df_test$stroke # True y-values vector
-TSS1 = sum( (y_test1 - y_bar1)^2 ) # Compute total sum of squares
-
-r_sq_linearModel1 = 1 - sum( (y_test1 - y_hat_linear1)^2 )/TSS1
-rmse_linearModel1 = sqrt((1/N)*sum((y_test1 - y_hat_linear1)^2))
-
-print(r_sq_linearModel1)
-print(rmse_linearModel1)
-```
-```{r}
-#Linear Model 2
-model_2 <- lm(stroke~age+hypertension+heart_disease+ever_married+avg_glucose_level+work_type,data=df_train)
-summary(model_2)
-
-y_hat_linear2 = predict.lm(model_2,df_test)
-
-y_bar2 = mean(df_train$stroke) # Average value of training data outcomes
-y_test2 = df_test$stroke # True y-values vector
-TSS2 = sum( (y_test2 - y_bar2)^2 ) # Compute total sum of squares
-
-r_sq_linearModel2 = 1 - sum( (y_test2 - y_hat_linear2)^2 )/TSS2
-rmse_linearModel2 = sqrt((1/N)*sum((y_test2 - y_hat_linear2)^2))
-
-print(r_sq_linearModel2)
-print(rmse_linearModel2)
-```
-
-```{r}
-#Linear Model 3
-model_3 <- lm(stroke~age+hypertension+heart_disease,data=df_train)
-summary(model_3)
-
-y_hat_linear3 = predict.lm(model_3,df_test)
-
-y_bar3 = mean(df_train$stroke) # Average value of training data outcomes
-y_test3 = df_test$stroke # True y-values vector
-TSS3 = sum( (y_test3 - y_bar3)^2 ) # Compute total sum of squares
-
-r_sq_linearModel3 = 1 - sum( (y_test3 - y_hat_linear3)^2 )/TSS3
-rmse_linearModel3 = sqrt((1/N)*sum((y_test3 - y_hat_linear3)^2))
-
-print(r_sq_linearModel3)
-print(rmse_linearModel3)
-```
-
-```{r}
-#Linear Model 4
-model_4 <- lm(stroke~age+hypertension,data=df_train)
-summary(model_4)
-
-y_hat_linear4 = predict.lm(model_4,df_test)
-
-y_bar4 = mean(df_train$stroke) # Average value of training data outcomes
-y_test4 = df_test$stroke # True y-values vector
-TSS4 = sum( (y_test4 - y_bar4)^2 ) # Compute total sum of squares
-
-r_sq_linearModel4 = 1 - sum( (y_test4 - y_hat_linear4)^2 )/TSS4
-rmse_linearModel4 = sqrt((1/N)*sum((y_test4 - y_hat_linear4)^2))
-
-print(r_sq_linearModel4)
-print(rmse_linearModel4)
-```
-
-```{r}
-#Linear Model 5
-model_5 <- lm(stroke~hypertension+heart_disease,data=df_train)
-summary(model_5)
-
-y_hat_linear5 = predict.lm(model_5,df_test)
-
-y_bar5 = mean(df_train$stroke) # Average value of training data outcomes
-y_test5 = df_test$stroke # True y-values vector
-TSS5 = sum( (y_test5 - y_bar5)^2 ) # Compute total sum of squares
-
-r_sq_linearModel5 = 1 - sum( (y_test5 - y_hat_linear5)^2 )/TSS5
-rmse_linearModel5 = sqrt((1/N)*sum((y_test5 - y_hat_linear5)^2))
-
-print(r_sq_linearModel5)
-print(rmse_linearModel5)
-```
-
-```{r}
-#Linear Model 6
-model_6 <- lm(stroke~.+hypertension*heart_disease+hypertension*age+heart_disease*age,data=df_train)
-summary(model_6)
-
-y_hat_linear6 = predict.lm(model_6,df_test)
-
-y_bar6 = mean(df_train$stroke) # Average value of training data outcomes
-y_test6 = df_test$stroke # True y-values vector
-TSS6 = sum( (y_test6 - y_bar6)^2 ) # Compute total sum of squares
-
-r_sq_linearModel6 = 1 - sum( (y_test6 - y_hat_linear6)^2 )/TSS6
-rmse_linearModel6 = sqrt((1/N)*sum((y_test6 - y_hat_linear6)^2))
-
-print(r_sq_linearModel6)
-print(rmse_linearModel6)
-```
