@@ -56,6 +56,7 @@ Initial exploration of the variables was done through a decision tree model and 
 The tree model tended to split `age` around `68` when trying to predict a stroke. Similarly, kNN found that an `age` bin beginning at `69` produces the most accurate results. It makes sense that there are only two bins since older people are just more likely to have strokes, regardless of other factors. Initial exploration with the linear model used a bin division of `>68`, but through trial and error, it was found that `>69` produces slightly more accurate results.  
 A similar pattern was observed in `average_glucose_level`. Passing this variable into the tree model divides `average_glucose_level` at about `200`. This also makes sense to have only two bins as these are the people who are more likely to have diabetes, which puts you at more risk for a stroke. Through trial and error, `190` was found to be the optimal bin division.  
 Smoking was significantly more difficult to gather meaning from though. It was evident from the data that there existed correlation between `smoking_status` and `stroke`, and it appears to be related to if a person ever smoked. However, a key issue that arises here is how the data was collected and what an individual's response is. Smoking *once* is not going to significantly increase stroke risk, but smoking every day for years and then quitting will. Similarly, people who just started smoking will have *some* risk for stroke, but people who have been continuously smoking for years will have significantly *more* risk. Because we do not know what people define as ‘frequently smokes’ or the years over which a person has smoked, we binned all individuals who ever identified as smokers into the same bin. This choice was further proven to be reasonable as different binnings produced less accurate results. However, this choice is still somewhat arbitrary and does not come from the data. We find it defensible though as any person who smokes is more likely to suffer from a stroke than a lifetime non-smoker.
+
 #### Interactions
 The variables that were interacted were the `age` bins and the `glucose_level` bins. This new variable was then interacted again with the `smoking_status` bins. Both interacted variables were added to the dataframe. These choices were made by observing patterns in the data. By looking through the data, it can be seen that those over a certain age and with high glucose are almost certain to have a stroke. Additionally, if this person has a history of smoking, that probability is ever higher. These interactions significantly increase the model's effectiveness at predicting if older individuals will have a stroke.
 
@@ -133,7 +134,6 @@ training_data_clean <- training_data_clean %>%
 testing_data_clean <- testing_data_clean %>%
   select(age, hypertension, heart_disease, avg_glucose_level, stroke)
 ```
-#### Decision Tree Model
 
 #### Linear Model
 ```{r}
@@ -379,13 +379,7 @@ SStot <- sum((strokes - mean(strokes))^2)
 r_squared <- 1 - (SSres / SStot)
 r_squared
 ```
-#### Decision Tree Model
-
-***
-
 ## Conclusion
-
+	In conclusion, all of our models fell short of the R^2 of .1569 given in the assignment description. Using K nearest neighbor, K means squared, and linear models to create a model, we found that linear models were the most effective model to achieve a high R^2 with an R^2 of .08617. Since the assignment asked us to create a model to predict the chance of strokes, we believe that our model is not safe or probable enough to be implemented in real life. A very low R^2 shows that the model is not a good predictor and if implemented, we would probably have many type 1 (false positive) and type 2 (false negative) errors. Therefore, we have failed to create a model that should be a good predictor and implemented in real life. 
 
 ***
-
-## Appendix
