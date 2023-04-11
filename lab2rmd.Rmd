@@ -14,53 +14,58 @@ library(broom)
 library(clue)
 library(class)
 ```
-Andrew Holzwarth, Brian Bippert, Felipe Martinez, Garrett Burroughs, Tyler Lynch  
+
+Andrew Holzwarth, Brian Bippert, Felipe Martinez, Garrett Burroughs, Tyler Lynch
 
 ## Summary
-The guiding question of the data analysis was how to best predict if an individual would suffer from a stroke. Our main approach given the testing and training data was to identify the variables that best predicted strokes. In order to find these variables, we used correlational models such as k Nearest Neighbor and k Means Clustering to determine which variables are most closely related to strokes. Decision trees were also useful in this step as most often the tree would choose to regress on the variable that was most predictive of a stroke. Certain variables such as `age`, `glucose_level`, and `smoking_status` were found to be highly related to the probability of an individual having a stroke. It was also found that some of these variables themselves are highly correlated. Using bins and interactions, we moved forward in an attempt to determine which combinations of variables would produce the highest `R^2` when using a linear model. We determined that using bins would be an effective means of increasing our `R^2` as certain factors, such as `age` being above `68`, were found to be very good predictors of stroke. Interacting the variables creates a new variable that relates its components, which, in the case of this data, was highly effective. Certain variables together, such as if the age is above `68` and if the glucose is above `200` drastically increases the accuracy of the model. The final steps of obtaining our `R^2` consisted of some trial and error, minorly adjusting the values used for our bins. From the given data, we extracted an `R^2` of `0.865` using various interactions of binned variables.  
 
-***
+The guiding question of the data analysis was how to best predict if an individual would suffer from a stroke. Our main approach given the testing and training data was to identify the variables that best predicted strokes. In order to find these variables, we used correlational models such as k Nearest Neighbor and k Means Clustering to determine which variables are most closely related to strokes. Decision trees were also useful in this step as most often the tree would choose to regress on the variable that was most predictive of a stroke. Certain variables such as `age`, `glucose_level`, and `smoking_status` were found to be highly related to the probability of an individual having a stroke. It was also found that some of these variables themselves are highly correlated. Using bins and interactions, we moved forward in an attempt to determine which combinations of variables would produce the highest `R^2` when using a linear model. We determined that using bins would be an effective means of increasing our `R^2` as certain factors, such as `age` being above `68`, were found to be very good predictors of stroke. Interacting the variables creates a new variable that relates its components, which, in the case of this data, was highly effective. Certain variables together, such as if the age is above `68` and if the glucose is above `200` drastically increases the accuracy of the model. The final steps of obtaining our `R^2` consisted of some trial and error, minorly adjusting the values used for our bins. From the given data, we extracted an `R^2` of `0.865` using various interactions of binned variables.
+
+------------------------------------------------------------------------
 
 ## Data
-* `age`: numeric ranging from 0.08 to 82  
-  + A bin was created for ages greater than 69 and less than or equal to 68
 
-* `avg_glucose_level`: numeric representing glucose level  
-  + A bin was created for glucose greater than 190 and less than or equal to 189
+-   `age`: numeric ranging from 0.08 to 82
 
-* `bmi`: character representing bmi, contained NAs that were omitted, and converted to a numeric
-	
-* `ever_married`: categorical character variable, converted to a dummy numeric variable
+    -   A bin was created for ages greater than 69 and less than or equal to 68
 
-* `gender`: categorical character variable, converted to a dummy numeric variable
+-   `avg_glucose_level`: numeric representing glucose level
 
-* `heart_disease`: dummy  numeric variable, left unchanged
+    -   A bin was created for glucose greater than 190 and less than or equal to 189
 
-* `hypertension`: dummy numeric variable, left unchanged
+-   `bmi`: character representing bmi, contained NAs that were omitted, and converted to a numeric
 
-* `id`: removed from our data as it is directly correlated to stroke
+-   `ever_married`: categorical character variable, converted to a dummy numeric variable
 
-* `Residence_type`: categorical character variable, converted to a dummy numeric variable
+-   `gender`: categorical character variable, converted to a dummy numeric variable
 
-* `smoking_status`: categorical character variable, converted to dummy numeric variable based on smoking status
+-   `heart_disease`: dummy numeric variable, left unchanged
 
-* `work_type`: dummy character variable, left unchanged
+-   `hypertension`: dummy numeric variable, left unchanged
 
-* `stroke`: target variable, dummy numeric variable
+-   `id`: removed from our data as it is directly correlated to stroke
+
+-   `Residence_type`: categorical character variable, converted to a dummy numeric variable
+
+-   `smoking_status`: categorical character variable, converted to dummy numeric variable based on smoking status
+
+-   `work_type`: dummy character variable, left unchanged
+
+-   `stroke`: target variable, dummy numeric variable
 
 #### Wrangling the data
-The first step we took in preparing the dataset was to remove the variables `id` and `X`. These were just labels for the observations, but they were directly correlated to `stroke` as they were listed in order, with all the stroke cases being listed after all the non-stroke cases. All other variables were left in, although `gender`, `ever_married`, and `Residence_type` were all converted to dummy variables. The `smoking_status` variable was also converted to a binary dummy variable despite having more than two inputs. If the person had formerly smoked or currently smokes, they were assigned a `1`. All other values were given a `0`. `BMI` was converted to a numeric vector as the original dataset has it as a character. Lastly, all `NA`s were omitted, which was only from the `BMI` variable, and were few enough to allow this omission.  
+
+The first step we took in preparing the dataset was to remove the variables `id` and `X`. These were just labels for the observations, but they were directly correlated to `stroke` as they were listed in order, with all the stroke cases being listed after all the non-stroke cases. All other variables were left in, although `gender`, `ever_married`, and `Residence_type` were all converted to dummy variables. The `smoking_status` variable was also converted to a binary dummy variable despite having more than two inputs. If the person had formerly smoked or currently smokes, they were assigned a `1`. All other values were given a `0`. `BMI` was converted to a numeric vector as the original dataset has it as a character. Lastly, all `NA`s were omitted, which was only from the `BMI` variable, and were few enough to allow this omission.
 
 #### Finding the Bins
-Initial exploration of the variables was done through a decision tree model and k Nearest Neighbor (kNN). This exploration uncovered the direct correlation between `age`, `glucose level`, `smoking status`, `hypertension`, and predicting a stroke. Given that all but `hypertension` consist of complex character variables, work was done to convert each vector into a *binned variable*.  
-The tree model tended to split `age` around `68` when trying to predict a stroke. Similarly, kNN found that an `age` bin beginning at `69` produces the most accurate results. It makes sense that there are only two bins since older people are just more likely to have strokes, regardless of other factors. Initial exploration with the linear model used a bin division of `>68`, but through trial and error, it was found that `>69` produces slightly more accurate results.  
-A similar pattern was observed in `average_glucose_level`. Passing this variable into the tree model divides `average_glucose_level` at about `200`. This also makes sense to have only two bins as these are the people who are more likely to have diabetes, which puts you at more risk for a stroke. Through trial and error, `190` was found to be the optimal bin division.  
-Smoking was significantly more difficult to gather meaning from though. It was evident from the data that there existed correlation between `smoking_status` and `stroke`, and it appears to be related to if a person ever smoked. However, a key issue that arises here is how the data was collected and what an individual's response is. Smoking *once* is not going to significantly increase stroke risk, but smoking every day for years and then quitting will. Similarly, people who just started smoking will have *some* risk for stroke, but people who have been continuously smoking for years will have significantly *more* risk. Because we do not know what people define as ‘frequently smokes’ or the years over which a person has smoked, we binned all individuals who ever identified as smokers into the same bin. This choice was further proven to be reasonable as different binnings produced less accurate results. However, this choice is still somewhat arbitrary and does not come from the data. We find it defensible though as any person who smokes is more likely to suffer from a stroke than a lifetime non-smoker.
-#### Interactions
-The variables that were interacted were the `age` bins and the `glucose_level` bins. This new variable was then interacted again with the `smoking_status` bins. Both interacted variables were added to the dataframe. These choices were made by observing patterns in the data. By looking through the data, it can be seen that those over a certain age and with high glucose are almost certain to have a stroke. Additionally, if this person has a history of smoking, that probability is ever higher. These interactions significantly increase the model's effectiveness at predicting if older individuals will have a stroke.
-#### Linear Model
+
+Initial exploration of the variables was done through a decision tree model and k Nearest Neighbor (kNN). This exploration uncovered the direct correlation between `age`, `glucose level`, `smoking status`, `hypertension`, and predicting a stroke. Given that all but `hypertension` consist of complex character variables, work was done to convert each vector into a *binned variable*.\
+The tree model tended to split `age` around `68` when trying to predict a stroke. Similarly, kNN found that an `age` bin beginning at `69` produces the most accurate results. It makes sense that there are only two bins since older people are just more likely to have strokes, regardless of other factors. Initial exploration with the linear model used a bin division of `>68`, but through trial and error, it was found that `>69` produces slightly more accurate results.\
+A similar pattern was observed in `average_glucose_level`. Passing this variable into the tree model divides `average_glucose_level` at about `200`. This also makes sense to have only two bins as these are the people who are more likely to have diabetes, which puts you at more risk for a stroke. Through trial and error, `190` was found to be the optimal bin division.\
+Smoking was significantly more difficult to gather meaning from though. It was evident from the data that there existed correlation between `smoking_status` and `stroke`, and it appears to be related to if a person ever smoked. However, a key issue that arises here is how the data was collected and what an individual's response is. Smoking *once* is not going to significantly increase stroke risk, but smoking every day for years and then quitting will. Similarly, people who just started smoking will have *some* risk for stroke, but people who have been continuously smoking for years will have significantly *more* risk. Because we do not know what people define as 'frequently smokes' or the years over which a person has smoked, we binned all individuals who ever identified as smokers into the same bin. This choice was further proven to be reasonable as different binnings produced less accurate results. However, this choice is still somewhat arbitrary and does not come from the data. We find it defensible though as any person who smokes is more likely to suffer from a stroke than a lifetime non-smoker. \#### Interactions The variables that were interacted were the `age` bins and the `glucose_level` bins. This new variable was then interacted again with the `smoking_status` bins. Both interacted variables were added to the dataframe. These choices were made by observing patterns in the data. By looking through the data, it can be seen that those over a certain age and with high glucose are almost certain to have a stroke. Additionally, if this person has a history of smoking, that probability is ever higher. These interactions significantly increase the model's effectiveness at predicting if older individuals will have a stroke. \#### Linear Model
 
 #### kNN
+
 ```{r, echo = FALSE, message = FALSE}
 testing_data <- read.csv("testing_data.csv")
 training_data <- read.csv("training_data.csv")
@@ -94,7 +99,9 @@ testing_data_clean <- testing_data_clean %>%
   mutate(across(everything(), maxmin))
 head(training_data_clean)
 ```
+
 #### kMC
+
 ```{r, echo = FALSE, message = FALSE}
 testing_data <- read.csv("testing_data.csv")
 training_data <- read.csv("training_data.csv")
@@ -134,16 +141,19 @@ training_data_clean <- training_data_clean %>%
 testing_data_clean <- testing_data_clean %>%
   select(age, hypertension, heart_disease, avg_glucose_level, stroke)
 ```
+
 #### Decision Tree Model
 
-
-***
+------------------------------------------------------------------------
 
 ## Results
+
 #### Linear Model
-When using linear regression on the dataset to predict if a stroke will occur, linear models failed to beat the `R^2` of `.1569` given in the initial report. From the 6 models conducted, even the same linear model that got the `.1569`, all models failed to even reach an `R^2` of `.09`. Our baseline “lame” model had an `R^2` of `.08258` and the only model to beat that threshold was a model that included interaction terms. The interaction terms added into the model were `hypertension` and `age`, `hypertension` and `heart_disease`, and `heart_disease` and `age`. With the addition of all variables and 3 new added interaction terms, the `R^2` value was `.08617`. One key feature of the linear model is that when new variables are added, whether they are correlated or not, the `R^2` increases in value. Looking at the adjusted `R^2`, which only increases in value if the new variables add to the model, the interaction variables added in model 6 increases the adjusted `R^2` from `.07906` in the “lame” model to `.08196` in the interaction variable model. The increase in adjusted `R^2` shows that adding the interaction variables makes the model a better prediction of stroke. However, the interaction variable model still fell way short of being a better predictor than the `.1569` model given in the initial lab assignment.
+
+When using linear regression on the dataset to predict if a stroke will occur, linear models failed to beat the `R^2` of `.1569` given in the initial report. From the 6 models conducted, even the same linear model that got the `.1569`, all models failed to even reach an `R^2` of `.09`. Our baseline "lame" model had an `R^2` of `.08258` and the only model to beat that threshold was a model that included interaction terms. The interaction terms added into the model were `hypertension` and `age`, `hypertension` and `heart_disease`, and `heart_disease` and `age`. With the addition of all variables and 3 new added interaction terms, the `R^2` value was `.08617`. One key feature of the linear model is that when new variables are added, whether they are correlated or not, the `R^2` increases in value. Looking at the adjusted `R^2`, which only increases in value if the new variables add to the model, the interaction variables added in model 6 increases the adjusted `R^2` from `.07906` in the "lame" model to `.08196` in the interaction variable model. The increase in adjusted `R^2` shows that adding the interaction variables makes the model a better prediction of stroke. However, the interaction variable model still fell way short of being a better predictor than the `.1569` model given in the initial lab assignment.
 
 #### kNN
+
 First, we identified the best number of neighbors to predict stroke.
 
 ```{r echo=FALSE, message=FALSE}
@@ -181,6 +191,7 @@ ggplot(data.frame(test = model, true = testing_data_clean$stroke), aes(x = test,
 ```
 
 This gave us a `R^2` and sum squared error as follows:
+
 ```{r, echo = FALSE, message = FALSE}
 print(paste("Sum Squared Error:", SSE[kstar]))
 # Residuals sum of squares
@@ -191,9 +202,13 @@ tss <- sum((testing_data_clean$stroke - mean(testing_data_clean$stroke)) ^ 2)
 r_square = 1 - (rss/tss)
 print(paste("R Squared", r_square))
 ```
-When using a k Nearest Neighbor (kNN) approach to predict if a patient would have a stroke, we were unable to achieve a positive `R^2`. The kNN model uses a majority vote model in classification. It is very rare that a patient has a stroke to begin with (3-5% in the sample data) so most of the time a majority vote will lead to a negative stroke prediction. Because of this, the model almost always predicted that no one in the test set would have a stroke. In the cases where it did make predictions about some patients having a stroke, it was often over-sensitive and would predict a much larger percentage than the 3-5% that actually existed in the training set. Because this is a classification problem, and because such a small number of people in the dataset actually had a stroke, kNN was not an effective model for this lab.  
-  
-#### k Mean Clustering (kMC)
+
+When using a k Nearest Neighbor (kNN) approach to predict if a patient would have a stroke, we were unable to achieve a positive `R^2`. The kNN model uses a majority vote model in classification. It is very rare that a patient has a stroke to begin with (3-5% in the sample data) so most of the time a majority vote will lead to a negative stroke prediction. Because of this, the model almost always predicted that no one in the test set would have a stroke. In the cases where it did make predictions about some patients having a stroke, it was often over-sensitive and would predict a much larger percentage than the 3-5% that actually existed in the training set. Because this is a classification problem, and because such a small number of people in the dataset actually had a stroke, kNN was not an effective model for this lab.
+
+#### k Mean Clustering (kMC) with Linear Regression
+
+When finding that the k Nearest Neighbor alone was not a good fit for the data, we tried using k Means Clustering to cluster the data into groups and then performing linear regression on each of those groups.
+
 First, we identified the best number of k clusters for predicting stroke.
 
 ```{r, echo = FALSE, message = FALSE}
@@ -205,6 +220,8 @@ for( k in 1:kMax){
 }
 plot(1:kMax,sumSqError) # Plot SSE against number of clusters
 ```
+
+![](https://lh4.googleusercontent.com/ZC1ixpichXaLM0l36cG9ZHKO75QC1_khdWgFRjv0DHill8YmlmfBl1D8VW46qbymPLNzt4xfVJYVsEgSyYoUXkfToLkL7tHcBN9-c7z9LSUPQOno0Hx2LisT5TNQkug9nOSgQ3ZDpeEw3BQbFTP7ci4)
 
 From the graph, we decided `k=10` was the best choice from where the elbow developed.
 
@@ -224,7 +241,19 @@ models <- training_data_clustered %>%
          glanced = map(model, glance),
          augmented = map(model, augment))
 ```
-The `R^2` value of this model:
+
+Here is an example of what our data looks like after adding the cluster label:
+
+    ##         age hypertension heart_disease avg_glucose_level stroke cluster
+    ## 1 0.4384766            0             0        0.04962607      0       2
+    ## 2 0.5483398            0             0        0.06250577      0       1
+    ## 3 0.7070312            0             0        0.53462284      0      10
+    ## 4 0.7436523            0             0        0.06813775      0       1
+    ## 5 0.9511719            0             0        0.22500231      0       3
+    ## 6 0.4140625            0             0        0.24628381      0       2
+
+We then evaluated our testing set using our k Means Cluster model to fit them into a cluster and select the correct linear model to predict the stroke value.
+
 ```{r, echo = FALSE, message = FALSE}
 # Predict clusters for testing data
 testing_data_clustered <- testing_data_clean %>% 
@@ -238,6 +267,29 @@ for(i in 1:nrow(testing_data_predicted)){
   predicted_stroke <- ifelse(predict(model, newdata = row) > 0.5, 1, 0)
   testing_data_predicted[i, "predicted_stroke"] <- predicted_stroke
 }
+```
+
+Here is an example of what our testing data looks like after adding the predicted stroke value and cluster labels:
+
+    ##          age hypertension heart_disease avg_glucose_level stroke cluster
+    ## 1 0.70674487            1             0        0.15702559      0       9
+    ## 2 0.09579668            0             0        0.26710192      0       8
+    ## 3 0.85337243            0             0        0.06619941      0       3
+    ## 4 0.57233627            0             0        0.74744371      0      10
+    ## 5 0.90224829            1             0        0.72291297      0       9
+    ## 6 0.96334311            0             0        0.10479574      0       3
+    ##   predicted_stroke
+    ## 1                0
+    ## 2                0
+    ## 3                0
+    ## 4                0
+    ## 5                0
+    ## 6                0
+
+Using this we evaluated the `R^2` value of this model:
+
+```{r, echo = FALSE, message = FALSE}
+
 strokes <- testing_data_predicted$stroke
 predicted_strokes <- testing_data_predicted$predicted_stroke
 residuals <- strokes - predicted_strokes
@@ -246,13 +298,15 @@ SStot <- sum((strokes - mean(strokes))^2)
 r_squared <- 1 - (SSres / SStot)
 r_squared
 ```
+
+Even with this method, when we tried to predict stroke on our testing set we got an R\^2 of -0.04029. This value didn\'t change significantly when trying different variables within our model, or different cluster, so we can assume that this predicting method isn\'t adequate for this dataset and problem.
+
 #### Decision Tree Model
 
-***
+------------------------------------------------------------------------
 
 ## Conclusion
 
-
-***
+------------------------------------------------------------------------
 
 ## Appendix
