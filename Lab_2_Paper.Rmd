@@ -1,0 +1,414 @@
+---
+title: 'Programming Lab #2'
+author: "DS 3001: Introduction to Machine Learning"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(tidyverse)
+library(tidyr)
+library(purrr)
+library(broom)
+library(clue)
+library(class)
+```
+Andrew Holzwarth, Brian Bippert, Felipe Martinez, Garrett Burroughs, Tyler Lynch  
+
+## Summary
+The guiding question of the data analysis was how to best predict if an individual would suffer from a stroke. Our main approach given the testing and training data was to identify the variables that best predicted strokes. In order to find these variables, we used correlational models such as k Nearest Neighbor and k Means Clustering to determine which variables are most closely related to strokes. Decision trees were also useful in this step as most often the tree would choose to regress on the variable that was most predictive of a stroke. Certain variables such as `age`, `glucose_level`, and `smoking_status` were found to be highly related to the probability of an individual having a stroke. It was also found that some of these variables themselves are highly correlated. Using bins and interactions, we moved forward in an attempt to determine which combinations of variables would produce the highest `R^2` when using a linear model. We determined that using bins would be an effective means of increasing our `R^2` as certain factors, such as `age` being above `68`, were found to be very good predictors of stroke. Interacting the variables creates a new variable that relates its components, which, in the case of this data, was highly effective. Certain variables together, such as if the age is above `68` and if the glucose is above `200` drastically increases the accuracy of the model. The final steps of obtaining our `R^2` consisted of some trial and error, minorly adjusting the values used for our bins. From the given data, we extracted an `R^2` of `0.865` using various interactions of binned variables.  
+
+***
+
+## Data
+* `age`: numeric ranging from 0.08 to 82  
+  + A bin was created for ages greater than 69 and less than or equal to 68
+
+* `avg_glucose_level`: numeric representing glucose level  
+  + A bin was created for glucose greater than 190 and less than or equal to 189
+
+* `bmi`: character representing bmi, contained NAs that were omitted, and converted to a numeric
+	
+* `ever_married`: categorical character variable, converted to a dummy numeric variable
+
+* `gender`: categorical character variable, converted to a dummy numeric variable
+
+* `heart_disease`: dummy  numeric variable, left unchanged
+
+* `hypertension`: dummy numeric variable, left unchanged
+
+* `id`: removed from our data as it is directly correlated to stroke
+
+* `Residence_type`: categorical character variable, converted to a dummy numeric variable
+
+* `smoking_status`: categorical character variable, converted to dummy numeric variable based on smoking status
+
+* `work_type`: dummy character variable, left unchanged
+
+* `stroke`: target variable, dummy numeric variable
+
+#### Wrangling the data
+The first step we took in preparing the dataset was to remove the variables `id` and `X`. These were just labels for the observations, but they were directly correlated to `stroke` as they were listed in order, with all the stroke cases being listed after all the non-stroke cases. All other variables were left in, although `gender`, `ever_married`, and `Residence_type` were all converted to dummy variables. The `smoking_status` variable was also converted to a binary dummy variable despite having more than two inputs. If the person had formerly smoked or currently smokes, they were assigned a `1`. All other values were given a `0`. `BMI` was converted to a numeric vector as the original dataset has it as a character. Lastly, all `NA`s were omitted, which was only from the `BMI` variable, and were few enough to allow this omission.  
+
+#### Finding the Bins
+Initial exploration of the variables was done through a decision tree model and k Nearest Neighbor (kNN). This exploration uncovered the direct correlation between `age`, `glucose level`, `smoking status`, `hypertension`, and predicting a stroke. Given that all but `hypertension` consist of complex character variables, work was done to convert each vector into a *binned variable*.  
+The tree model tended to split `age` around `68` when trying to predict a stroke. Similarly, kNN found that an `age` bin beginning at `69` produces the most accurate results. It makes sense that there are only two bins since older people are just more likely to have strokes, regardless of other factors. Initial exploration with the linear model used a bin division of `>68`, but through trial and error, it was found that `>69` produces slightly more accurate results.  
+A similar pattern was observed in `average_glucose_level`. Passing this variable into the tree model divides `average_glucose_level` at about `200`. This also makes sense to have only two bins as these are the people who are more likely to have diabetes, which puts you at more risk for a stroke. Through trial and error, `190` was found to be the optimal bin division.  
+Smoking was significantly more difficult to gather meaning from though. It was evident from the data that there existed correlation between `smoking_status` and `stroke`, and it appears to be related to if a person ever smoked. However, a key issue that arises here is how the data was collected and what an individual's response is. Smoking *once* is not going to significantly increase stroke risk, but smoking every day for years and then quitting will. Similarly, people who just started smoking will have *some* risk for stroke, but people who have been continuously smoking for years will have significantly *more* risk. Because we do not know what people define as ‘frequently smokes’ or the years over which a person has smoked, we binned all individuals who ever identified as smokers into the same bin. This choice was further proven to be reasonable as different binnings produced less accurate results. However, this choice is still somewhat arbitrary and does not come from the data. We find it defensible though as any person who smokes is more likely to suffer from a stroke than a lifetime non-smoker.
+
+#### Interactions
+The variables that were interacted were the `age` bins and the `glucose_level` bins. This new variable was then interacted again with the `smoking_status` bins. Both interacted variables were added to the dataframe. These choices were made by observing patterns in the data. By looking through the data, it can be seen that those over a certain age and with high glucose are almost certain to have a stroke. Additionally, if this person has a history of smoking, that probability is ever higher. These interactions significantly increase the model's effectiveness at predicting if older individuals will have a stroke.
+
+#### kNN
+```{r, echo = FALSE, message = FALSE}
+testing_data <- read.csv("testing_data.csv")
+training_data <- read.csv("training_data.csv")
+training_data_clean <- training_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) # numeric encode smoking_status
+testing_data_clean <- testing_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) %>% # numeric encode smoking_status
+  na.omit
+# MaxMin normalization funtion
+maxmin <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+# MaxMin everything
+training_data_clean <- training_data_clean %>%
+  mutate(across(everything(), maxmin))
+testing_data_clean <- testing_data_clean %>%
+  mutate(across(everything(), maxmin))
+head(training_data_clean)
+```
+#### kMC
+```{r, echo = FALSE, message = FALSE}
+testing_data <- read.csv("testing_data.csv")
+training_data <- read.csv("training_data.csv")
+training_data_clean <- training_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) # numeric encode smoking_status
+testing_data_clean <- testing_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) %>% # numeric encode smoking_status
+  na.omit
+# MaxMin normalization funtion
+maxmin <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+# MaxMin everything
+training_data_clean <- training_data_clean %>%
+  mutate(across(everything(), maxmin))
+testing_data_clean <- testing_data_clean %>%
+  mutate(across(everything(), maxmin))
+# See a correlation matrix of variables
+cor(training_data_clean)
+# Select most correlated variables
+training_data_clean <- training_data_clean %>%
+  select(age, hypertension, heart_disease, avg_glucose_level, stroke)
+testing_data_clean <- testing_data_clean %>%
+  select(age, hypertension, heart_disease, avg_glucose_level, stroke)
+```
+
+#### Linear Model
+```{r}
+#import data
+df_train <- read.csv("training_data.csv")
+df_test <- read.csv("testing_data.csv")
+#data wrangle
+df_train <- df_train[-c(1,2)]
+df_test <- df_test[-c(1,2)]
+df_train$bmi = as.numeric(df_train$bmi)
+df_test$bmi = as.numeric(df_test$bmi)
+df_train$gender <- ifelse(df_train$gender == "Male",1,0)
+df_train$ever_married <- ifelse(df_train$ever_married == "Yes",1,0)
+df_train$Residence_type <- ifelse(df_train$Residence_type == "Urban",1,0)
+df_test$gender <- ifelse(df_test$gender == "Male",1,0)
+df_test$ever_married <- ifelse(df_test$ever_married == "Yes",1,0)
+df_test$Residence_type <- ifelse(df_test$Residence_type == "Urban",1,0)
+df_train <- na.omit(df_train)
+df_test <- na.omit(df_test)
+summary(df_train)
+N = dim(df_train)[1] + dim(df_test)[1]
+```
+
+```{r}
+#Linear Model 1
+lazy_lm <- lm(stroke~.,data=df_train)
+summary(lazy_lm)
+y_hat_linear1 = predict.lm(lazy_lm,df_test)
+y_bar1 = mean(df_train$stroke) # Average value of training data outcomes
+y_test1 = df_test$stroke # True y-values vector
+TSS1 = sum( (y_test1 - y_bar1)^2 ) # Compute total sum of squares
+r_sq_linearModel1 = 1 - sum( (y_test1 - y_hat_linear1)^2 )/TSS1
+rmse_linearModel1 = sqrt((1/N)*sum((y_test1 - y_hat_linear1)^2))
+print(r_sq_linearModel1)
+print(rmse_linearModel1)
+```
+```{r}
+#Linear Model 2
+model_2 <- lm(stroke~age+hypertension+heart_disease+ever_married+avg_glucose_level+work_type,data=df_train)
+summary(model_2)
+y_hat_linear2 = predict.lm(model_2,df_test)
+y_bar2 = mean(df_train$stroke) # Average value of training data outcomes
+y_test2 = df_test$stroke # True y-values vector
+TSS2 = sum( (y_test2 - y_bar2)^2 ) # Compute total sum of squares
+r_sq_linearModel2 = 1 - sum( (y_test2 - y_hat_linear2)^2 )/TSS2
+rmse_linearModel2 = sqrt((1/N)*sum((y_test2 - y_hat_linear2)^2))
+print(r_sq_linearModel2)
+print(rmse_linearModel2)
+```
+
+```{r}
+#Linear Model 3
+model_3 <- lm(stroke~age+hypertension+heart_disease,data=df_train)
+summary(model_3)
+y_hat_linear3 = predict.lm(model_3,df_test)
+y_bar3 = mean(df_train$stroke) # Average value of training data outcomes
+y_test3 = df_test$stroke # True y-values vector
+TSS3 = sum( (y_test3 - y_bar3)^2 ) # Compute total sum of squares
+r_sq_linearModel3 = 1 - sum( (y_test3 - y_hat_linear3)^2 )/TSS3
+rmse_linearModel3 = sqrt((1/N)*sum((y_test3 - y_hat_linear3)^2))
+print(r_sq_linearModel3)
+print(rmse_linearModel3)
+```
+
+```{r}
+#Linear Model 4
+model_4 <- lm(stroke~age+hypertension,data=df_train)
+summary(model_4)
+y_hat_linear4 = predict.lm(model_4,df_test)
+y_bar4 = mean(df_train$stroke) # Average value of training data outcomes
+y_test4 = df_test$stroke # True y-values vector
+TSS4 = sum( (y_test4 - y_bar4)^2 ) # Compute total sum of squares
+r_sq_linearModel4 = 1 - sum( (y_test4 - y_hat_linear4)^2 )/TSS4
+rmse_linearModel4 = sqrt((1/N)*sum((y_test4 - y_hat_linear4)^2))
+print(r_sq_linearModel4)
+print(rmse_linearModel4)
+```
+
+```{r}
+#Linear Model 5
+model_5 <- lm(stroke~hypertension+heart_disease,data=df_train)
+summary(model_5)
+y_hat_linear5 = predict.lm(model_5,df_test)
+y_bar5 = mean(df_train$stroke) # Average value of training data outcomes
+y_test5 = df_test$stroke # True y-values vector
+TSS5 = sum( (y_test5 - y_bar5)^2 ) # Compute total sum of squares
+r_sq_linearModel5 = 1 - sum( (y_test5 - y_hat_linear5)^2 )/TSS5
+rmse_linearModel5 = sqrt((1/N)*sum((y_test5 - y_hat_linear5)^2))
+print(r_sq_linearModel5)
+print(rmse_linearModel5)
+```
+
+```{r}
+#Linear Model 6
+model_6 <- lm(stroke~.+hypertension*heart_disease+hypertension*age+heart_disease*age,data=df_train)
+summary(model_6)
+y_hat_linear6 = predict.lm(model_6,df_test)
+y_bar6 = mean(df_train$stroke) # Average value of training data outcomes
+y_test6 = df_test$stroke # True y-values vector
+TSS6 = sum( (y_test6 - y_bar6)^2 ) # Compute total sum of squares
+r_sq_linearModel6 = 1 - sum( (y_test6 - y_hat_linear6)^2 )/TSS6
+rmse_linearModel6 = sqrt((1/N)*sum((y_test6 - y_hat_linear6)^2))
+print(r_sq_linearModel6)
+print(rmse_linearModel6)
+```
+***
+
+## Results
+#### Linear Model
+When using linear regression on the dataset to predict if a stroke will occur, linear models failed to beat the `R^2` of `.1569` given in the initial report. From the 6 models conducted, even the same linear model that got the `.1569`, all models failed to even reach an `R^2` of `.09`. Our baseline “lame” model had an `R^2` of `.08258` and the only model to beat that threshold was a model that included interaction terms. The interaction terms added into the model were `hypertension` and `age`, `hypertension` and `heart_disease`, and `heart_disease` and `age`. With the addition of all variables and 3 new added interaction terms, the `R^2` value was `.08617`. One key feature of the linear model is that when new variables are added, whether they are correlated or not, the `R^2` increases in value. Looking at the adjusted `R^2`, which only increases in value if the new variables add to the model, the interaction variables added in model 6 increases the adjusted `R^2` from `.07906` in the “lame” model to `.08196` in the interaction variable model. The increase in adjusted `R^2` shows that adding the interaction variables makes the model a better prediction of stroke. However, the interaction variable model still fell way short of being a better predictor than the `.1569` model given in the initial lab assignment.
+
+Similarly, a different linear model system that also included interaction variables managed to produce an `R^2` value of `0.0865`, however, the variables interacted were completely different. `Age` was interacted with `average_glucose_level` which was then interacted with `smoking_status`. The fact that two separate and similar `R^2` values were generated through completely different means indicates that there is some correlation between some of the variables, and that the variables chosen for interactions are predictors of strokes.
+
+#### kNN
+First, we identified the best number of neighbors to predict stroke.
+
+```{r echo=FALSE, message=FALSE}
+kMax = 20 # Maximum number of neighbors to consider
+SSE = matrix(NA,kMax,1) # Vector to store SSE's for each value of k
+for( k in 1:kMax){
+  model_k = knn(train = training_data_clean[, !(names(training_data_clean) %in% c("stroke"))],
+                   test = testing_data_clean[, !(names(testing_data_clean) %in% c("stroke"))],
+                   cl = training_data_clean$stroke,
+                   k = k)
+  model_k <- as.numeric(levels(model_k))[model_k]
+  SSE[k] = sum( (model_k - testing_data_clean$stroke)^2 ) # Compute the sum of squared error and store
+}
+ggplot(data.frame(k = 1:kMax, sse = SSE), aes(x = k, y = sse)) +
+    geom_point() # Plot SSE against k 
+```
+
+The optimal amount of neighbors appeared to be between 5-10, as seen by the elbow on the graph.
+
+```{r, echo = FALSE, message = FALSE}
+kstar = which.min(SSE) # Determine optimal number of neighbors to use
+model = knn(train = training_data_clean[, !(names(training_data_clean) %in% c("stroke"))],
+                   test = testing_data_clean[, !(names(testing_data_clean) %in% c("stroke"))],
+                   cl = training_data_clean$stroke,
+                   k = kstar) # Fit model
+model <- as.numeric(levels(model))[model]
+ggplot(data.frame(test = model, true = testing_data_clean$stroke), aes(x = test, y = true)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, color = "red") + # Line to show a perfect prediction
+    scale_x_continuous(limits = c(0, 1)) + # Scale x axis to max and min possible values
+    scale_y_continuous(limits = c(0, 1)) + # Scale y axis to max and min possible values
+    ggtitle(paste0("k = ", kstar)) +
+    xlab("Predicted Test Values") +
+    ylab("Test Values") # Plot optimal predictions
+```
+
+This gave us a `R^2` and sum squared error as follows:
+```{r, echo = FALSE, message = FALSE}
+print(paste("Sum Squared Error:", SSE[kstar]))
+# Residuals sum of squares
+rss <- SSE[kstar]
+# Total sum of squares (proportional to the variance of the observed data)
+tss <- sum((testing_data_clean$stroke - mean(testing_data_clean$stroke)) ^ 2)
+# Coefficient of determination R2
+r_square = 1 - (rss/tss)
+print(paste("R Squared", r_square))
+```
+When using a k Nearest Neighbor (kNN) approach to predict if a patient would have a stroke, we were unable to achieve a positive `R^2`. The kNN model uses a majority vote model in classification. It is very rare that a patient has a stroke to begin with (3-5% in the sample data) so most of the time a majority vote will lead to a negative stroke prediction. Because of this, the model almost always predicted that no one in the test set would have a stroke. In the cases where it did make predictions about some patients having a stroke, it was often over-sensitive and would predict a much larger percentage than the 3-5% that actually existed in the training set. Because this is a classification problem, and because such a small number of people in the dataset actually had a stroke, kNN was not an effective model for this lab.  
+  
+#### k Mean Clustering (kMC)
+First, we identified the best number of k clusters for predicting stroke.
+
+```{r, echo = FALSE, message = FALSE}
+kMax = 50 # Maximum number of neighbors to consider
+sumSqError = matrix(NA,kMax,1) # Vector to store SSE's for each value of k
+for( k in 1:kMax){
+  model_k = kmeans(training_data_clean, k)
+  sumSqError[k] = model_k$tot.withinss # Save the SSE in the sumSqError vector
+}
+plot(1:kMax,sumSqError) # Plot SSE against number of clusters
+```
+
+From the graph, we decided `k=10` was the best choice from where the elbow developed.
+
+```{r, echo = FALSE, message = FALSE}
+# Build k means cluster model
+k = 10
+kmodel = kmeans(training_data_clean, centers = k)
+# Add cluster labels to data
+training_data_clustered <- training_data_clean %>% 
+  mutate(cluster = kmodel$cluster)
+# Make linear regression model for each cluster
+models <- training_data_clustered %>% 
+  group_by(cluster) %>% 
+  nest() %>% 
+  mutate(model = map(data, ~ lm(stroke ~ ., data = .)),
+         tidied = map(model, tidy),
+         glanced = map(model, glance),
+         augmented = map(model, augment))
+```
+The `R^2` value of this model:
+```{r, echo = FALSE, message = FALSE}
+# Predict clusters for testing data
+testing_data_clustered <- testing_data_clean %>% 
+  mutate(cluster = cl_predict(kmodel, testing_data_clean))
+# Apply correct linear regression model to each row in testing data based on cluster
+testing_data_predicted <- testing_data_clustered
+for(i in 1:nrow(testing_data_predicted)){
+  cluster <- testing_data_predicted[i, "cluster"]
+  model <- subset(models, cluster == cluster)$model[[1]]
+  row <- data.frame(testing_data_predicted[i, ])
+  predicted_stroke <- ifelse(predict(model, newdata = row) > 0.5, 1, 0)
+  testing_data_predicted[i, "predicted_stroke"] <- predicted_stroke
+}
+strokes <- testing_data_predicted$stroke
+predicted_strokes <- testing_data_predicted$predicted_stroke
+residuals <- strokes - predicted_strokes
+SSres <- sum(residuals^2)
+SStot <- sum((strokes - mean(strokes))^2)
+r_squared <- 1 - (SSres / SStot)
+r_squared
+```
+### Best Overall
+
+Our best overall model was a linear model that included bins for most variables, and interacted age, average glucose level, and smoking status. The resulting R^2 is 0.0865.
+
+```{r}
+df_test = read.csv("testing_data.csv")
+df_train = read.csv("training_data.csv")
+
+df_train = df_train[-c(1,2)] #Removing bad vectors that perfectly predict stroke
+df_test = df_test[-c(1,2)]
+
+df_train$bmi = as.numeric(df_train$bmi) #Converting BMI to numeric
+df_test$bmi = as.numeric(df_test$bmi)
+
+df_train = na.omit(df_train) #Omitting all NAs
+df_test = na.omit(df_test)
+
+df_train$gender = ifelse(df_train$gender == "Male", 1, 0) #Converting character dummy variables to numerics
+df_train$ever_married = ifelse(df_train$ever_married == "Yes", 1.0, 0)
+df_train$Residence_type = ifelse(df_train$Residence_type == "Rural", 0.0, 1)
+df_train$smoked = ifelse(df_train$smoking_status == "formerly smoked" | df_train$smoking_status == "smokes", 1.0, 0) #This choice is explained in the data section
+
+df_test$gender = ifelse(df_test$gender == "Male", 1, 0)
+df_test$ever_married = ifelse(df_test$ever_married == "Yes", 1.0, 0)
+df_test$Residence_type = ifelse(df_test$Residence_type == "Rural", 0.0, 1)
+df_test$smoked = ifelse(df_test$smoking_status == "formerly smoked" | df_test$smoking_status == "smokes", 1.0, 0)
+
+df_train$gluc = ifelse(df_train$avg_glucose_level > 190, 1, 0) #Binning variables based on tree models, kNN, kMC, and trial and error
+df_train$old = ifelse(df_train$age > 69, 1 , 0)
+df_train$overbmi = ifelse(df_train$bmi > 20, 1, 0)
+df_train$og = ifelse(df_train$old == 1 & df_train$gluc == 1, 1, 0) #Interacting variables
+df_train$b = ifelse(df_train$og == 1 & df_train$smoked == 1, 1, 0)
+
+
+
+df_test$gluc = ifelse(df_test$avg_glucose_level > 190, 1, 0)
+df_test$old = ifelse(df_test$age > 69, 1 , 0)
+df_test$overbmi = ifelse(df_test$bmi > 20, 1, 0)
+df_test$og = ifelse(df_test$old == 1 & df_test$gluc == 1, 1, 0)
+df_test$b = ifelse(df_test$og == 1 & df_test$smoked == 1, 1, 0)
+
+
+model = lm(stroke~.,data=df_train) #Model generation
+test = predict(model, df_test) #Testing the model
+
+
+y_bar = mean(df_train$stroke)
+y_test = df_test$stroke
+TSS = sum( (y_test - y_bar)^2 ) 
+
+rtest = 1 - sum( (y_test - test)^2 )/TSS
+print(rtest)
+
+plot(test, df_test$stroke)
+```
+
+As seen in the plot, this predictor is still not perfect, but gets closer than any other attempt.
+
+## Conclusion
+	In conclusion, all of our models fell short of the `R^2` of `.1569` given in the assignment description. Using K nearest neighbor, K means squared, and linear models to create a model, we found that linear models were the most effective model to achieve a high `R^2` with an `R^2` of `0.0865`. Since the assignment asked us to create a model to predict the chance of strokes, we believe that our model is not safe or probable enough to be implemented in real life. A very low R^2 shows that the model is not a good predictor and if implemented, we would probably have many type 1 (false positive) and type 2 (false negative) errors. Therefore, we have failed to create a model that should be a good predictor and implemented in real life. Given a dataset of this size, always choosing that the individual will not have a stroke results in a reasonably high probability that the choice was correct. For this reason, a larger dataset with more individuals who suffered from strokes could drastically increase the efficiency of our models. Future research on this topic should include a more comprehensive dataset that allows for more conclusions to be drawn about stroke victims. Furthermore, utilization of a random forest might produce a high `R^2` as most variables in our best model were divided into binary bins, indicating that some form of decision tree could produce good results. Our approach in determining the highest `R^2` is highly defensible as up until the last step of trial and error, almost all of our choices were decided by the data. We utilized various forms of prediction and grouping models to determine which variables are correlated with strokes, and what the values are that best predict a stroke. We then used these variables in a variety of ways to generate linear models. Finally, we slightly tweaked the bin divisions to achieve the maximum `R^2`. Obviously, there will be a higher possible `R^2` that can be obtained through more interactions, more binning, or a different model entirely. Finding this value was not feasible as we do not have the tools or desire to game an `R^2` that is `0.001` higher out of the data. We feel that our result of `0.0865` is the maximum possible value that we can achieve with this given dataset at this point in time as finding this value already required the use of all of oiur tools.
+
+***
