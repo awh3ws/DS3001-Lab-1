@@ -91,6 +91,8 @@ kmodel = kmeans(training_data_clean, centers = k)
 training_data_clustered <- training_data_clean %>% 
   mutate(cluster = kmodel$cluster)
 
+head(training_data_clustered)
+
 # Make linear regression model for each cluster
 models <- training_data_clustered %>% 
   group_by(cluster) %>% 
@@ -104,7 +106,8 @@ models <- training_data_clustered %>%
 
 ## Determining Accuracy of the Model
 
-Finding the R^2 value of our model
+Finding the R\^2 value of our model
+
 ```{r}
 # Predict clusters for testing data
 testing_data_clustered <- testing_data_clean %>% 
@@ -116,10 +119,13 @@ for(i in 1:nrow(testing_data_predicted)){
   cluster <- testing_data_predicted[i, "cluster"]
   model <- subset(models, cluster == cluster)$model[[1]]
   row <- data.frame(testing_data_predicted[i, ])
-  predicted_stroke <- ifelse(predict(model, newdata = row) > 0.5, 1, 0)
+  predicted_stroke <- predict(model, newdata = row)
   testing_data_predicted[i, "predicted_stroke"] <- predicted_stroke
 }
 
+head(testing_data_predicted)
+
+# Calculate R^2
 strokes <- testing_data_predicted$stroke
 predicted_strokes <- testing_data_predicted$predicted_stroke
 
@@ -130,7 +136,3 @@ r_squared <- 1 - (SSres / SStot)
 
 r_squared
 ```
-
-
-
-
