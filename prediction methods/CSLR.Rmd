@@ -1,0 +1,136 @@
+---
+title: "Cluster Specific Linear Regression"
+author: "Tyler Lynch (tjl5vmd)"
+date: "2023-04-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(tidyverse)
+library(tidyr)
+library(purrr)
+library(broom)
+library(clue)
+```
+
+## Data Cleaning and Normalization
+
+```{r}
+testing_data <- read.csv("testing_data.csv")
+training_data <- read.csv("training_data.csv")
+
+training_data_clean <- training_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) # numeric encode smoking_status
+
+testing_data_clean <- testing_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) %>% # numeric encode smoking_status
+  na.omit
+
+# MaxMin normalization funtion
+maxmin <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+# MaxMin everything
+training_data_clean <- training_data_clean %>%
+  mutate(across(everything(), maxmin))
+testing_data_clean <- testing_data_clean %>%
+  mutate(across(everything(), maxmin))
+
+# See a correlation matrix of variables
+cor(training_data_clean)
+
+# Select most correlated variables
+training_data_clean <- training_data_clean %>%
+  select(age, hypertension, heart_disease, avg_glucose_level, stroke)
+testing_data_clean <- testing_data_clean %>%
+  select(age, hypertension, heart_disease, avg_glucose_level, stroke)
+
+```
+
+## Making the k nearest neighbor model
+
+Seeing the best number of k clusters for predicting stroke.
+
+```{r}
+
+kMax = 50 # Maximum number of neighbors to consider
+sumSqError = matrix(NA,kMax,1) # Vector to store SSE's for each value of k
+
+for( k in 1:kMax){
+  model_k = kmeans(training_data_clean, k)
+  sumSqError[k] = model_k$tot.withinss # Save the SSE in the sumSqError vector
+}
+plot(1:kMax,sumSqError) # Plot SSE against number of clusters
+```
+
+Looking at the graph I'm going to choose a cluster value of 10.
+
+```{r}
+# Build k means cluster model
+k = 10
+kmodel = kmeans(training_data_clean, centers = k)
+
+# Add cluster labels to data
+training_data_clustered <- training_data_clean %>% 
+  mutate(cluster = kmodel$cluster)
+
+# Make linear regression model for each cluster
+models <- training_data_clustered %>% 
+  group_by(cluster) %>% 
+  nest() %>% 
+  mutate(model = map(data, ~ lm(stroke ~ ., data = .)),
+         tidied = map(model, tidy),
+         glanced = map(model, glance),
+         augmented = map(model, augment))
+
+```
+
+## Determining Accuracy of the Model
+
+Finding the R^2 value of our model
+```{r}
+# Predict clusters for testing data
+testing_data_clustered <- testing_data_clean %>% 
+  mutate(cluster = cl_predict(kmodel, testing_data_clean))
+
+# Apply correct linear regression model to each row in testing data based on cluster
+testing_data_predicted <- testing_data_clustered
+for(i in 1:nrow(testing_data_predicted)){
+  cluster <- testing_data_predicted[i, "cluster"]
+  model <- subset(models, cluster == cluster)$model[[1]]
+  row <- data.frame(testing_data_predicted[i, ])
+  predicted_stroke <- ifelse(predict(model, newdata = row) > 0.5, 1, 0)
+  testing_data_predicted[i, "predicted_stroke"] <- predicted_stroke
+}
+
+strokes <- testing_data_predicted$stroke
+predicted_strokes <- testing_data_predicted$predicted_stroke
+
+residuals <- strokes - predicted_strokes
+SSres <- sum(residuals^2)
+SStot <- sum((strokes - mean(strokes))^2)
+r_squared <- 1 - (SSres / SStot)
+
+r_squared
+```
+
+
+
+

@@ -1,0 +1,118 @@
+---
+title: "K Nearest Neighbor"
+author: "Tyler Lynch (tjl5vmd)"
+date: "2023-04-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(tidyverse)
+library(class)
+```
+
+## Data Cleaning and Normalization
+
+```{r}
+testing_data <- read.csv("testing_data.csv")
+training_data <- read.csv("training_data.csv")
+
+training_data_clean <- training_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) # numeric encode smoking_status
+
+testing_data_clean <- testing_data %>%
+  select(-X, -id) %>%   # Remove X and id columns
+  mutate(bmi = as.numeric(bmi)) %>%   # Convert bmi to a numeric 
+  na.omit %>%
+  mutate(gender = as.numeric(factor(gender))) %>% # numeric encode gender
+  mutate(ever_married = as.numeric(factor(ever_married))) %>% # numeric encode ever_married
+  mutate(work_type = as.numeric(factor(work_type))) %>% # numeric encode work_type
+  mutate(Residence_type = as.numeric(factor(Residence_type))) %>% # numeric encode Residence_type
+  mutate(smoking_status = as.numeric(factor(smoking_status))) %>% # numeric encode smoking_status
+  na.omit
+
+# MaxMin normalization funtion
+maxmin <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+# MaxMin everything
+training_data_clean <- training_data_clean %>%
+  mutate(across(everything(), maxmin))
+testing_data_clean <- testing_data_clean %>%
+  mutate(across(everything(), maxmin))
+
+head(training_data_clean)
+```
+
+## Making the k nearest neighbor model
+
+Seeing the best number of k clusters for predicting stroke.
+
+```{r}
+
+kMax = 20 # Maximum number of neighbors to consider
+SSE = matrix(NA,kMax,1) # Vector to store SSE's for each value of k
+
+for( k in 1:kMax){
+  model_k = knn(train = training_data_clean[, !(names(training_data_clean) %in% c("stroke"))],
+                   test = testing_data_clean[, !(names(testing_data_clean) %in% c("stroke"))],
+                   cl = training_data_clean$stroke,
+                   k = k)
+  model_k <- as.numeric(levels(model_k))[model_k]
+  SSE[k] = sum( (model_k - testing_data_clean$stroke)^2 ) # Compute the sum of squared error and store
+}
+
+ggplot(data.frame(k = 1:kMax, sse = SSE), aes(x = k, y = sse)) +
+    geom_point() # Plot SSE against k 
+```
+
+Predicting using the model with the lowest sum squared error.
+
+```{r}
+kstar = which.min(SSE) # Determine optimal number of neighbors to use
+
+model = knn(train = training_data_clean[, !(names(training_data_clean) %in% c("stroke"))],
+                   test = testing_data_clean[, !(names(testing_data_clean) %in% c("stroke"))],
+                   cl = training_data_clean$stroke,
+                   k = kstar) # Fit model
+model <- as.numeric(levels(model))[model]
+ggplot(data.frame(test = model, true = testing_data_clean$stroke), aes(x = test, y = true)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, color = "red") + # Line to show a perfect prediction
+    scale_x_continuous(limits = c(0, 1)) + # Scale x axis to max and min possible values
+    scale_y_continuous(limits = c(0, 1)) + # Scale y axis to max and min possible values
+    ggtitle(paste0("k = ", kstar)) +
+    xlab("Predicted Test Values") +
+    ylab("Test Values") # Plot optimal predictions
+```
+
+## Determining Accuracy of the Model
+
+Finding the R^2 value of our model
+```{r}
+print(paste("Sum Squared Error:", SSE[kstar]))
+
+# Residuals sum of squares
+rss <- SSE[kstar]
+
+# Total sum of squares (proportional to the variance of the observed data)
+tss <- sum((testing_data_clean$stroke - mean(testing_data_clean$stroke)) ^ 2)
+
+# Coefficient of determination R2
+r_square = 1 - (rss/tss)
+
+print(paste("R Squared", r_square))
+```
+
+
+
+
