@@ -95,7 +95,7 @@ def nextToAdd(): #chooses least populated district to be added to
     return maxPriority
 
 
-def allna(): #Determines if all counties have been placed, unused
+def allna(): #Determines if all counties have been placed
     for i in range (len(adjac)):
         for j in range (len(adjac[i])):
             if len(adjac[i][j]) > 2:
@@ -163,9 +163,9 @@ def flip(nexDistrict):      #moves a random county from a district to a differen
     numChecks = 0
     
     if supCheck == 10:    #if there are no valid counties to flip, force add to a different district and exit as there are no other possibilities
-          forceAdd()
-          tot += 1
-          return 1
+          c = forceAdd()
+          if c == 1:
+            return 1
     
     while len(adjToCounty) < 3:
         if numChecks >= 15:   #makes sure that the randomly selected county has viable neighbors for flipping
@@ -209,24 +209,28 @@ def forceAdd():  #forces an addition to a district if the smallest county biases
         for j in range (0, len(districts[i])):
           if bigC == districts[i][j]:
             d = i
-      insertCounty(adjac[row][col], d)
-      toRem = counties.index(adjac[row][col])
-      removeCounty(toRem)
+      if(adjac[row][col] != "na"):
+        insertCounty(adjac[row][col], d)
+        toRem = counties.index(adjac[row][col])
+        removeCounty(toRem)
+        return 1
+      return 0
 
 
 numFlips = 0
 tot = 11      #count of total added counties, begins at 11 because there are 11 seed counties
 counties = df.County.values.flatten().tolist()  #array of all counties
-while tot != 133:
+while not allna():
     nextDisctrict = nextToAdd()
     maxPop = 0
     maxIndex = 0
     maxRow = 0
     
-    if(numFlips == 10):     #prevents an infinite loop
-         forceAdd()
-         numFlips = 0
-         tot += 1
+    if(numFlips >= 10):     #prevents an infinite loop
+         check = forceAdd()
+         if check == 1:
+              numFlips = 0
+              tot += 1
     
     for i in range (len(districts[nextDisctrict])): #loops to determine which county will be added to the district
         if districts[nextDisctrict][i] == 0:
