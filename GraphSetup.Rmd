@@ -1,0 +1,264 @@
+---
+title: "GraphSetup"
+output: html_document
+date: "2023-05-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+counties = read.csv("county_adjacencies.csv")
+```
+
+```{r libraries, warning = FALSE, message = FALSE}
+library(reticulate)
+py_install("networkx")
+```
+
+```{python}
+import pandas as pd
+import networkx as nx
+import random
+from numpy import transpose
+
+
+df = pd.read_csv ('county_adjacencies.csv')
+noDel = df
+
+totPop = 0 #calculates total population
+for i in range (0, len(df.Population2022)):
+  totPop += df.Population2022[i]
+  
+districts = [[0]*132 for i in range(11)] #initializes voting districts array
+
+adjac = [[0]*10 for i in range(10)] #Generates adjacency lists
+trueAdjac = [[0]*133 for i in range(10)]
+
+adjac[0] = df.N1
+adjac[1] = df.N2
+adjac[2] = df.N3
+adjac[3] = df.N4
+adjac[4] = df.N5
+adjac[5] = df.N6
+adjac[6] = df.N7
+adjac[7] = df.N8
+adjac[8] = df.N9
+adjac[9] = df.N10
+
+for i in range (len(adjac)):
+    for j in range (len(adjac[i])):
+        if str(adjac[i][j]) == "nan":
+            adjac[i][j] = "na"
+
+for i in range (len(adjac)):
+    for j in range (len(adjac[i])):
+        trueAdjac[i][j] = adjac[i][j]
+        
+pops = [0,0,0,0,0,0,0,0,0,0,0]
+
+def removeCounty(num):
+  for j in range (0, len(df.County)): #removes seed counties from adjacency list
+      if df.N1[j] == df.County[num]:
+        df.loc[j, 'N1'] = "na"
+      if df.N2[j] == df.County[num]:
+        df.loc[j, 'N2'] = "na"
+      if df.N3[j] == df.County[num]:
+        df.loc[j, 'N3'] = "na"
+      if df.N4[j] == df.County[num]:
+        df.loc[j, 'N4'] = "na"
+      if df.N5[j] == df.County[num]:
+        df.loc[j, 'N5'] = "na"
+      if df.N6[j] == df.County[num]:
+        df.loc[j, 'N6'] = "na"
+      if df.N7[j] == df.County[num]:
+        df.loc[j, 'N7'] = "na"
+      if df.N8[j] == df.County[num]:
+        df.loc[j, 'N8'] = "na"
+      if df.N9[j] == df.County[num]:
+        df.loc[j, 'N9'] = "na"
+      if df.N10[j] == df.County[num]:
+        df.loc[j, 'N10'] = "na"
+
+randNum = 0 #generates seed counties
+for i in range (0, 11):
+  randNum = random.randint(0, 132)
+  districts[i][0] = df.loc[randNum, 'County']
+  pops[i] = df.loc[randNum, 'Population2022']
+  removeCounty(randNum)
+  
+  
+def nextToAdd(): #chooses least populated district to be added to
+    maxPriority = pops.index(min(pops))
+    return maxPriority
+
+
+def allna(): #Determines if all counties have been placed, unused
+    for i in range (len(adjac)):
+        for j in range (len(adjac[i])):
+            if len(adjac[i][j]) > 2:
+                return False
+    return True
+
+def getPop(county):             #gets the population associated with a county
+    counties = df.County.values.flatten().tolist()
+    indexOfCounty = counties.index(county)
+    return df.Population2022[indexOfCounty]
+
+def insertCounty(county, row):  #adds a county to the target district
+    for i in range (0, len(districts[row])):
+        if districts[row][i] == 0:
+            districts[row][i] = county
+            break
+
+def chooseCounty(nexDistrict): #used when flipping a county, randomly choose a county from the smallest district
+    countyToNeighbor = ""
+    col = 0
+    
+    while len(str(countyToNeighbor)) < 3:
+        col = random.randint(0, len(districts[nexDistrict]) - 1)
+        countyToNeighbor = districts[nexDistrict][col]
+    
+    return countyToNeighbor
+   
+def isValidRemove(county):    #used when flipping a county, ensures that it does not break the continuity of the district
+    d = []
+    
+    for i in range (0, len(districts)):
+          if county in districts[i]:
+                d = districts[i]
+    
+    distGraph = nx.Graph()
+      
+    for i in range (0,len(d)):
+        if d[i] != 0:
+          distGraph.add_node(d[i])
+      
+    if len(d) == 0:
+          return False
+    for i in range (0, len(d)):   #generates a graph of all connections in a district
+          for j in range (0, len(trueAdjac)):
+                for k in range (0, len(trueAdjac[j])):
+                  if d[i] == trueAdjac[j][k]:
+                        connectTo = counties[k] 
+                        if connectTo in d:
+                          distGraph.add_edge(d[i], connectTo)
+      
+    
+    distGraph.remove_node(county)   #removes the target to remove from the graph
+    if len(list(distGraph.nodes)) == 1:   #if there are only one node left - do not remove
+        return False
+    if nx.is_connected(distGraph):  #if the graph is no longer connected, this node is vital for continuity - do not remove
+        return True
+
+    return False  
+      
+
+def flip(nexDistrict):      #moves a random county from a district to a different district
+    countyToNeighbor = chooseCounty(nexDistrict)
+    supCheck = 0
+    adjToCounty = ""
+    numChecks = 0
+    
+    if supCheck == 10:    #if there are no valid counties to flip, force add to a different district and exit as there are no other possibilities
+          forceAdd()
+          tot += 1
+          return 1
+    
+    while len(adjToCounty) < 3:
+        if numChecks >= 15:   #makes sure that the randomly selected county has viable neighbors for flipping
+            countyToNeighbor = chooseCounty(nexDistrict)
+            numChecks = 0
+            supCheck += 1
+            
+        adjToCounty = trueAdjac[random.randint(0,9)][counties.index(countyToNeighbor)] #checks adjacency
+        while adjToCounty == "na":
+            adjToCounty = trueAdjac[random.randint(0,9)][counties.index(countyToNeighbor)]
+        if adjToCounty in districts[nexDistrict]:
+            adjToCounty = ""
+            numChecks += 1
+        elif not isValidRemove(adjToCounty):
+            adjToCounty = ""
+            numChecks += 1
+
+    for i in range (0, len(districts)):   #updates all changed populations
+        for j in range (0, len(districts[i])):
+            if adjToCounty == districts[i][j]:
+                districts[i][j] = 0
+                pops[i] -= getPop(adjToCounty)
+            
+
+    pops[nexDistrict] += getPop(adjToCounty)
+    insertCounty(adjToCounty, nexDistrict)
+    return 0
+    
+    
+def forceAdd():  #forces an addition to a district if the smallest county biases towards trading a county back and forth
+      row = 0
+      col = 0
+      for i in range(len(adjac)):
+            for j in range (len(adjac[i])):
+                  if adjac[i][j] != "na":
+                    row = i
+                    col = j
+      bigC = counties[col]
+      d = 0
+      for i in range (0, len(districts)):
+        for j in range (0, len(districts[i])):
+          if bigC == districts[i][j]:
+            d = i
+      insertCounty(adjac[row][col], d)
+      toRem = counties.index(adjac[row][col])
+      removeCounty(toRem)
+
+
+numFlips = 0
+tot = 11      #count of total added counties, begins at 11 because there are 11 seed counties
+counties = df.County.values.flatten().tolist()  #array of all counties
+while tot != 133:
+    nextDisctrict = nextToAdd()
+    maxPop = 0
+    maxIndex = 0
+    maxRow = 0
+    
+    if(numFlips == 10):     #prevents an infinite loop
+         forceAdd()
+         numFlips = 0
+         tot += 1
+    
+    for i in range (len(districts[nextDisctrict])): #loops to determine which county will be added to the district
+        if districts[nextDisctrict][i] == 0:
+            break
+        row = counties.index(districts[nextDisctrict][i])
+        for j in range (0, 10):
+            if adjac[j][row] != "na":
+                if maxPop < getPop(adjac[j][row]): #currently choosing to add the county adjacent to the district with the largest population
+                    maxPop = getPop(adjac[j][row])
+                    maxIndex = j
+                    maxRow = row
+    
+    if adjac[maxIndex][maxRow] == "na": #if no counties border the district with the smallest population, flip a district into that district
+        tot += flip(nextDisctrict)      #keeps track of total counties added so far
+        numFlips += 1                   #prevents infinite loop
+    else:                               #if a county does exist, add it to the district
+        numFlips = 0                    #prevents an infinite loop where the flip causes the two smallest districts to keep trading the same county
+        tot += 1                        #keeps track of total counties added so far
+        insertCounty(adjac[maxIndex][maxRow], nextDisctrict)  
+        pops[nextDisctrict] += getPop(adjac[maxIndex][maxRow])
+        toRem = counties.index(adjac[maxIndex][maxRow])
+        removeCounty(toRem)
+    
+    
+real = []
+for i in range (len(districts)): #cleans the list to remove all zeros
+      r = []
+      for j in range (len(districts[i])):
+        if(districts[i][j] != 0):
+            r.append(districts[i][j])
+      real.append(r)
+            
+print(real) #the final cleaned 2d array of counties
+
+```
