@@ -11,10 +11,71 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(tidyr)
 library(dplyr)
 library(ggplot2)
+library(stringr)
+library(usmap)
 ```
 
 ```{r}
+# Import Data
+votingVA <- read.csv("/Users/andrewholzwarth/Desktop/DS 3001/lab_3/VotingVA.csv")
+countyPRES <- read.csv("/Users/andrewholzwarth/Desktop/DS 3001/lab_3/CPres2000-2020.csv")
+Adjacent <- read.csv("/Users/andrewholzwarth/Desktop/DS 3001/lab_3/county_adjacencies (2).csv")
+```
+
+```{r}
+# Wrangle Data
+
+countyPRES <- countyPRES[countyPRES$state_po == "VA",]
+
+CountyVA <- countyPRES %>%
+  group_by(county_name, party) %>%
+  summarize(candidatevotes = sum(candidatevotes))
+
+
+CountyVA <- CountyVA %>%
+  mutate(candidatevotes = round(candidatevotes, 0),
+         totalvotes = sum(candidatevotes))
+
+
+CountyVA <- CountyVA[,c("county_name", "party", "totalvotes", "candidatevotes")]
+```
+
+
+```{r}
+# Which way does each state lean and what is the county population?
+
+df_flipped <- CountyVA %>%
+  pivot_wider( names_from = party, values_from = candidatevotes)
+
+df_flipped <- replace(df_flipped, is.na(df_flipped), 0) # Make NA values 0 because the NA values are for when there are no votes for a party within a specific county
+
+df_flipped$Prediction <- NA
+
+#Predictive Model 
+for (i in 1:nrow(df_flipped)) {
+  Parties <- colnames(df_flipped)[3:7]  # party name columns start from the third column
+  max_votes <- max(df_flipped[i, Parties], na.rm = TRUE)
+  Prediction <- Parties[df_flipped[i, Parties] == max_votes]
+  
+  df_flipped$Prediction[i] <- Prediction # add winning party name to last column
+}
+
+df_flipped <- df_flipped %>%
+  mutate(county_name = tolower(county_name),
+         Prediction = tolower(Prediction))
+
+df_flipped <- df_flipped %>%
+  mutate(County = str_to_title(county_name) %>% str_replace_all("\\s+", ""))
+
+```
+
+```{r}
+#Combine the prediction into the adjacency data frame
+
+merged_df <- merge(Adjacent, df_flipped, by = "County")
+merged_df <- merged_df[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,24)]
 
 ```
