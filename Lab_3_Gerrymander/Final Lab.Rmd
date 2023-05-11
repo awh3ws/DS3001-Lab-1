@@ -1,0 +1,486 @@
+---
+title: "GraphSetup"
+output: html_document
+date: "2023-05-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(tidyverse)
+library(tidyr)
+library(purrr)
+library(broom)
+library(clue)
+library(class)
+library(usmap)
+library(ggplot2)
+```
+Andrew Holzwarth, Brian Bippert, Felipe Martinez, Garrett Burroughs, Tyler Lynch  
+
+## Summary
+The goal of this lab was to gerrymander two sets of voting districts in Virginia. One in favor of the **Republican** Party and another in favor of the **Democratic** party. The idea of gerrymandering a state is simple: create districts that create an artificial majority in favor of one political party over another. However, the problem is very difficult to solve with concessions being made at different steps that can drastically change the outcome of the problem, such as keeping districts contiguous and of similar population sizes. Some of the concessions made for our lab was only grouping districts along county lines instead of being more granular and making a simple prediction model based on averages of the past 20 years instead of using a more complex model that puts more weight on recent years.  
+	To tackle the problem, our group created a prediction model using `R` and used `Python` to create the contiguous and roughly equal-sized districts. The prediction model with `R` took the sum of how many votes each party received from 2000-2020. Whichever party received the most votes was deemed to be the political leaning of that specific county. The districting algorithm utilized the adjacency matrix of all counties in Virginia. The algorithm begins by selecting 11 **random** seed counties, and chooses to add to the district with the current smallest population. If there are no valid counties to add to the district with the smallest population, a county will *flip*. Flipping is a process that chooses a random county in the current district, and checks its neighbors. If a neighbor is valid to flip, it is moved from the district it is presently in to the district with the smallest population. The requirements for a valid flip are that the county to be flipped must not be in the district it is going to be flipped to and that removing that county from its current district does not break the continuity. If a district has no valid flips, a county is added to a random district, breaking the rule that the smallest district gets added to. This constraint is the main problem with this algorithm as the districts are only roughly equal, with some being significantly larger.  
+	The results of our lab are not perfect gerrymandered districts of Virginia, but they do create 11 relatively equal districts. Our code also only makes one random set of districts without caring about the political leaning, but it does output which party won and the ratio of districts that lean toward each party. With more work by students in future semesters, we believe that our project would be a great jumping off point for them to make perfectly gerrymandered districts in Virginia.  
+
+***
+
+## Data
+The three datasets that we used for the assignment were `voting_VA.csv`, `countrypres_2000-2020.csv`, and a file that specified which counties were adjacent to each other. The predictive model used the `voting_VA` file to compute the winning party per county. 
+
+* `voting_VA.csv` - A dataframe that includes data on voting data from 2000-2022, every state, all counties, county FIPS codes, candidates, political parties, and how many votes each candidate and party got each year. The prediction model used the ratio of *candidate votes* to determine which party won each county throughout the past **6** election cycles. The data had to be wrangled to include only Virginia, one line per county instead of 3-5 depending on which parties were on the poll, and to calculate which party received the greatest share of votes within each county. The newly wrangled data frame is called `df_flipped` and was then used in conjunction with `county_adjacendies.csv` to create the districts. We had no issues wrangling the data for the prediction model.  
+  + `year`: The election year
+  + `state`: The specific state within the United States that row pertains to 
+  + `county_name`: The county name for that specific row within a specific state
+  + `county_fips`: The FIPS code for the county, which is a number to uniquely identify a geographical location/area
+  + `party`: The political party for that specific row
+  + `candidatevotes`: How many votes that party/candidate got within 1 county for 1 election year
+  + `totalvotes`: The total number of votes within 1 county for 1 election year
+* `county_adjacencies.csv` - an adjacency list of all counties in Virginia. This file was the backbone of the districting algorithm. There were some small issues with this file, including some counties existing as a neighbor to a different county, but not vice versa. Other issues included some small misspellings or counties existing twice within a single row of the adjacency list. All of these issues were found and changed while running the districting code as it would return an error if it came across any discrepancies in the file. Any mistakes currently in the file do not impact the end result of our work, but may need to be addressed in future iterations of the project.
+
+
+***
+
+## Results
+  For our prediction model, the process is very binary with each county being classified as either `democrat` or `republican` regardless of the discrepancy in votes between each party. Although our prediction model works and does not omit any county, there are areas to make the model more sophisticated. Using percentages of votes between the two parties, and therefore keeping track of counties with large percentages of votes within each county, we could make a model that is not binary, but rather characterizes the political leaning of each county along a scale. More extreme values would be binary in nature, but some counties would have “**average**” values which show a more even split of political leanings. Additionally, we could put more weight on recent elections to show how Virginia is changing over time compared to characterizing 2000 data the same as 2020 data. With more time and knowledge the model could become more sophisticated and show closer to a true prediction of voting patterns.  
+  Our process for gerrymandering involved generating a random apportionment of Virginia into 11 contiguous and roughly equal districts and then summing the population of each district where the sign of each county was determined by the predicted voting outcome. Essentially, if a county was predicted to vote **Democrat**, their population would be multiplied by `-1`. Then all populations would be added across a district. If this sum is **negative**, there were more votes for the Democrats. This district would then be added to the Democrats total districts. Whichever party wins more districts would then win Virginia. This model only accounts for who wins a district, which overlooks close districts that tend to average around 50% per major party. In these cases, updating the predictive model to return a percentage of the county that will vote a certain way would drastically increase the accuracy of our results. Another change that can be made is to account for the current trend of each county. Our current predictive model just looks at overall totals, but by more heavily weighting recent voting trends, our predictive model may improve in accuracy. Another drawback of the gerrymandering function is that we cannot specify 11 districts in either party’s favor. The districts are going to be **random** for every output, but we will receive a statement showing which party will win the most districts and the margin of victory.
+ 
+
+***
+
+## Conclusion
+  At a baseline level, gerrymandering voting districts appears to be a simple assignment, but the biggest challenge was creating the voting districts. Building the prediction model to see which party each county votes for was time consuming, but not challenging. We were only able to create districts using `python`, which although was not restricted, was not the language that we used for machine learning during the semester.  
+	As stated in the introduction, although our code does create districts that give preferences towards both parties, the districts are not perfect and could be perfected by students in future semesters. The algorithm provided contains key functions that will be useful in future projects, such as the `flip` function, which flips a county to a different district. If we had chosen to start with predefined counties, this function would have been very valuable at generating new and gerrymandered districts. However, we wanted to be more ambitious, building the voting districts from scratch, which required a lot more overhead as adding to a district is significantly more difficult than just reshuffling already existing districts. Despite the issues, we are very pleased with the results of our project as each run of our code produces a unique districting and therefore unique voting map of Virginia. Although the population constraint got somewhat lost, all districts are contiguous. This problem can be solved in future research by splitting the higher populated counties into smaller chunks, preventing the counties in Northern Virginia from dominating. Furthermore, the districting algorithm can absolutely be improved. It currently chooses to add to a district based on the population count of a district, which can be modified to account for the political leaning of that district as well. This would move the project over from producing random districts to producing the most optimal gerrymandering given the initial 11 seed counties. We feel that this is the most significant improvement that can be made to our project.  
+Although these changes would improve the results of the project, they were not easily feasible for us at this time with the tools available. Despite our time and knowledge constraints, students doing this project in the future will find that our work is a very helpful starting point, providing a baseline for improvement. Similarly we find that our project accomplishes what we set out to do, create a gerrymandered Virginia. A key portion of our functionality is that the best result our code can produce is a result of how many times you run it, which is the only way to find the best solution to an NP-hard problem like this one. However, there is no true “best” gerrymandering. All voting models are predictive, populations change, world events and politicians and money all impact how and why people vote. The best any possible gerrymandering can do is an approximation, which is what we accomplished.  
+```{r libraries, warning = FALSE, message = FALSE}
+library(reticulate)
+py_install("networkx")
+py_install("pandas")
+py_install("numpy")
+```
+
+```{r}
+counties = read.csv("county_adjacencies.csv")
+```
+
+
+
+```{python}
+import pandas as pd
+import networkx as nx
+import random
+from numpy import transpose
+
+
+df = pd.read_csv ('county_adjacencies.csv')
+noDel = df
+
+totPop = 0 #calculates total population
+for i in range (0, len(df.Population2022)):
+  totPop += df.Population2022[i]
+  
+districts = [[0]*132 for i in range(11)] #initializes voting districts array
+
+adjac = [[0]*10 for i in range(10)] #Generates adjacency lists
+trueAdjac = [[0]*133 for i in range(10)]
+
+adjac[0] = df.N1
+adjac[1] = df.N2
+adjac[2] = df.N3
+adjac[3] = df.N4
+adjac[4] = df.N5
+adjac[5] = df.N6
+adjac[6] = df.N7
+adjac[7] = df.N8
+adjac[8] = df.N9
+adjac[9] = df.N10
+
+for i in range (len(adjac)):
+    for j in range (len(adjac[i])):
+        if str(adjac[i][j]) == "nan":
+            adjac[i][j] = "na"
+
+for i in range (len(adjac)):
+    for j in range (len(adjac[i])):
+        trueAdjac[i][j] = adjac[i][j]
+        
+pops = [0,0,0,0,0,0,0,0,0,0,0]
+
+def removeCounty(num):
+  for j in range (0, len(df.County)): #removes seed counties from adjacency list
+      if df.N1[j] == df.County[num]:
+        df.loc[j, 'N1'] = "na"
+      if df.N2[j] == df.County[num]:
+        df.loc[j, 'N2'] = "na"
+      if df.N3[j] == df.County[num]:
+        df.loc[j, 'N3'] = "na"
+      if df.N4[j] == df.County[num]:
+        df.loc[j, 'N4'] = "na"
+      if df.N5[j] == df.County[num]:
+        df.loc[j, 'N5'] = "na"
+      if df.N6[j] == df.County[num]:
+        df.loc[j, 'N6'] = "na"
+      if df.N7[j] == df.County[num]:
+        df.loc[j, 'N7'] = "na"
+      if df.N8[j] == df.County[num]:
+        df.loc[j, 'N8'] = "na"
+      if df.N9[j] == df.County[num]:
+        df.loc[j, 'N9'] = "na"
+      if df.N10[j] == df.County[num]:
+        df.loc[j, 'N10'] = "na"
+
+randNum = 0 #generates seed counties
+for i in range (0, 11):
+  randNum = random.randint(0, 132)
+  districts[i][0] = df.loc[randNum, 'County']
+  pops[i] = df.loc[randNum, 'Population2022']
+  removeCounty(randNum)
+  
+  
+def nextToAdd(): #chooses least populated district to be added to
+    maxPriority = pops.index(min(pops))
+    return maxPriority
+
+
+def allna(): #Determines if all counties have been placed
+    for i in range (len(adjac)):
+        for j in range (len(adjac[i])):
+            if len(adjac[i][j]) > 2:
+                return False
+    return True
+
+def getPop(county):             #gets the population associated with a county
+    counties = df.County.values.flatten().tolist()
+    indexOfCounty = counties.index(county)
+    return df.Population2022[indexOfCounty]
+
+def insertCounty(county, row):  #adds a county to the target district
+    for i in range (0, len(districts[row])):
+        if districts[row][i] == 0:
+            districts[row][i] = county
+            break
+
+def chooseCounty(nexDistrict): #used when flipping a county, randomly choose a county from the smallest district
+    countyToNeighbor = ""
+    col = 0
+    
+    while len(str(countyToNeighbor)) < 3:
+        col = random.randint(0, len(districts[nexDistrict]) - 1)
+        countyToNeighbor = districts[nexDistrict][col]
+    
+    return countyToNeighbor
+   
+def isValidRemove(county):    #used when flipping a county, ensures that it does not break the continuity of the district
+    d = []
+    
+    for i in range (0, len(districts)):
+          if county in districts[i]:
+                d = districts[i]
+    
+    distGraph = nx.Graph()
+      
+    for i in range (0,len(d)):
+        if d[i] != 0:
+          distGraph.add_node(d[i])
+      
+    if len(d) == 0:
+          return False
+    for i in range (0, len(d)):   #generates a graph of all connections in a district
+          for j in range (0, len(trueAdjac)):
+                for k in range (0, len(trueAdjac[j])):
+                  if d[i] == trueAdjac[j][k]:
+                        connectTo = counties[k] 
+                        if connectTo in d:
+                          distGraph.add_edge(d[i], connectTo)
+      
+    
+    distGraph.remove_node(county)   #removes the target to remove from the graph
+    if len(list(distGraph.nodes)) == 1:   #if there are only one node left - do not remove
+        return False
+    if len(list(distGraph.nodes)) == 0:
+        return False
+    if nx.is_connected(distGraph):  #if the graph is no longer connected, this node is vital for continuity - do not remove
+        return True
+
+    return False  
+      
+
+def flip(nexDistrict):      #moves a random county from a district to a different district
+    countyToNeighbor = chooseCounty(nexDistrict)
+    supCheck = 0
+    adjToCounty = ""
+    numChecks = 0
+    
+
+    
+    while len(adjToCounty) < 3:
+        if supCheck >= 10:    #if there are no valid counties to flip, force add to a different district and exit as there are no other possibilities
+          c = forceAdd()
+          if c == 1:
+            return 1
+        if numChecks >= 15:   #makes sure that the randomly selected county has viable neighbors for flipping
+            countyToNeighbor = chooseCounty(nexDistrict)
+            numChecks = 0
+            supCheck += 1
+            
+        adjToCounty = trueAdjac[random.randint(0,9)][counties.index(countyToNeighbor)] #checks adjacency
+        while adjToCounty == "na":
+            adjToCounty = trueAdjac[random.randint(0,9)][counties.index(countyToNeighbor)]
+        if adjToCounty in districts[nexDistrict]:
+            adjToCounty = ""
+            numChecks += 1
+        elif not isValidRemove(adjToCounty):
+            adjToCounty = ""
+            numChecks += 1
+
+    for i in range (0, len(districts)):   #updates all changed populations
+        for j in range (0, len(districts[i])):
+            if adjToCounty == districts[i][j]:
+                districts[i][j] = 0
+                pops[i] -= getPop(adjToCounty)
+            
+
+    pops[nexDistrict] += getPop(adjToCounty)
+    insertCounty(adjToCounty, nexDistrict)
+    return 0
+    
+    
+def forceAdd():  #forces an addition to a district if the smallest county biases towards trading a county back and forth
+      row = 0
+      col = 0
+      for i in range(len(adjac)):
+            for j in range (len(adjac[i])):
+                  if adjac[i][j] != "na":
+                    row = i
+                    col = j
+      bigC = counties[col]
+      d = 0
+      for i in range (0, len(districts)):
+        for j in range (0, len(districts[i])):
+          if bigC == districts[i][j]:
+            d = i
+      if(adjac[row][col] != "na"):
+        insertCounty(adjac[row][col], d)
+        toRem = counties.index(adjac[row][col])
+        removeCounty(toRem)
+        return 1
+      return 0
+
+
+numFlips = 0
+tot = 11      #count of total added counties, begins at 11 because there are 11 seed counties
+counties = df.County.values.flatten().tolist()  #array of all counties
+while not allna():
+    nextDisctrict = nextToAdd()
+    maxPop = 0
+    maxIndex = 0
+    maxRow = 0
+    
+    if(numFlips >= 10):     #prevents an infinite loop
+         check = forceAdd()
+         if check == 1:
+              numFlips = 0
+              tot += 1
+    
+    for i in range (len(districts[nextDisctrict])): #loops to determine which county will be added to the district
+        if districts[nextDisctrict][i] == 0:
+            break
+        row = counties.index(districts[nextDisctrict][i])
+        for j in range (0, 10):
+            if adjac[j][row] != "na":
+                if maxPop < getPop(adjac[j][row]): #currently choosing to add the county adjacent to the district with the largest population
+                    maxPop = getPop(adjac[j][row])
+                    maxIndex = j
+                    maxRow = row
+    
+    if adjac[maxIndex][maxRow] == "na": #if no counties border the district with the smallest population, flip a district into that district
+        tot += flip(nextDisctrict)      #keeps track of total counties added so far
+        numFlips += 1                   #prevents infinite loop
+    else:                               #if a county does exist, add it to the district
+        numFlips = 0                    #prevents an infinite loop where the flip causes the two smallest districts to keep trading the same county
+        tot += 1                        #keeps track of total counties added so far
+        insertCounty(adjac[maxIndex][maxRow], nextDisctrict)  
+        pops[nextDisctrict] += getPop(adjac[maxIndex][maxRow])
+        toRem = counties.index(adjac[maxIndex][maxRow])
+        removeCounty(toRem)
+    
+    
+real = []
+for i in range (len(districts)): #cleans the list to remove all zeros
+      r = []
+      for j in range (len(districts[i])):
+        if(districts[i][j] != 0):
+            r.append(districts[i][j])
+      real.append(r)
+            
+print(real) #the final cleaned 2d array of counties
+
+```
+```{r}
+library(reticulate)
+districts = py$real
+
+```
+
+```{r}
+# Import Data
+votingVA <- read.csv("VotingVA.csv")
+countyPRES <- read.csv("CPres2000-2020.csv")
+Adjacent <- read.csv("county_adjacencies.csv")
+```
+
+```{r}
+# Wrangle Data
+
+countyPRES <- countyPRES[countyPRES$state_po == "VA",]
+
+CountyVA <- countyPRES %>%
+  group_by(county_name, party) %>%
+  summarize(candidatevotes = sum(candidatevotes))
+
+
+CountyVA <- CountyVA %>%
+  mutate(candidatevotes = round(candidatevotes, 0),
+         totalvotes = sum(candidatevotes))
+
+
+CountyVA <- CountyVA[,c("county_name", "party", "totalvotes", "candidatevotes")]
+```
+
+
+```{r}
+# Which way does each state lean and what is the county population?
+
+df_flipped <- CountyVA %>%
+  pivot_wider( names_from = party, values_from = candidatevotes)
+
+df_flipped <- replace(df_flipped, is.na(df_flipped), 0) # Make NA values 0 because the NA values are for when there are no votes for a party within a specific county
+
+df_flipped$Prediction <- NA
+
+#Predictive Model 
+for (i in 1:nrow(df_flipped)) {
+  Parties <- colnames(df_flipped)[3:7]  # party name columns start from the third column
+  max_votes <- max(df_flipped[i, Parties], na.rm = TRUE)
+  Prediction <- Parties[df_flipped[i, Parties] == max_votes]
+  
+  df_flipped$Prediction[i] <- Prediction # add winning party name to last column
+}
+
+df_flipped <- df_flipped %>%
+  mutate(county_name = tolower(county_name),
+         Prediction = tolower(Prediction))
+
+df_flipped <- df_flipped %>%
+  mutate(County = str_to_title(county_name) %>% str_replace_all("\\s+", ""))
+
+```
+
+```{r}
+#Combine the prediction into the adjacency data frame
+
+merged_df <- merge(Adjacent, df_flipped, by = "County")
+vote_df = data.frame(matrix(ncol = 3, nrow = 133))
+vote_df[1] <- merged_df[1]
+vote_df[2] <- merged_df[2]
+vote_df[3] <- merged_df[25]
+
+```
+
+
+```{r}
+outcomes = c(0,0,0,0,0,0,0,0,0,0,0)
+
+d1 = districts[1]
+d2 = districts[2]
+d3 = districts[3]
+d4 = districts[4]
+d5 = districts[5]
+d6 = districts[6]
+d7 = districts[7]
+d8 = districts[8]
+d9 = districts[9]
+d10 = districts[10]
+d11= districts[11]
+
+democrat = -1
+republican = 1
+
+for (i in 1:length(vote_df$X1)){
+  curParty = 0
+  if (vote_df$X3[i] == "republican")
+    curParty = republican
+  else
+    curParty = democrat
+  
+  if (vote_df$X1[i] %in% d1[[1]])
+    outcomes[1] = outcomes[1] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d2[[1]])
+    outcomes[2] = outcomes[2] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d3[[1]])
+    outcomes[3] = outcomes[3] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d4[[1]])
+    outcomes[4] = outcomes[4] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d5[[1]])
+    outcomes[5] = outcomes[5] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d6[[1]])
+    outcomes[6] = outcomes[6] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d7[[1]])
+    outcomes[7] = outcomes[7] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d8[[1]])
+    outcomes[8] = outcomes[8] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d9[[1]])
+    outcomes[9] = outcomes[9] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d10[[1]])
+    outcomes[10] = outcomes[10] + (vote_df$X2[i] * curParty)
+  else if (vote_df$X1[i] %in% d11[[1]])
+    outcomes[11] = outcomes[11] + (vote_df$X2[i] * curParty)
+}
+
+
+dem = 0
+rep = 0
+
+for (i in 1:length(outcomes)){
+  if (outcomes[i] > 0){rep = rep + 1}
+  else {dem = dem + 1}
+}
+
+if (dem > rep){
+  sprintf("Democrats win: %i-%i", dem, rep)
+}
+if (rep > dem) {
+  sprintf("Republicans win: %i-%i", rep, dem)
+}
+```
+
+
+
+```{r}
+
+adf = read.csv("/Users/andrewholzwarth/Desktop/DS 3001/lab_3/county_adjacencies (2).csv")
+fips = adf$FIPS
+
+df1 <- vote_df
+df1$X3 <- as.integer(str_replace(df1$X3, "republican", "1"))
+df1$X3 <- as.integer(str_replace(df1$X3, "democrat", "0"))
+df1$X3[is.na(df1$X3)] = 0
+
+df <- data.frame(
+  fips = as.character(fips),
+  values = df1$X3
+) 
+
+plot_usmap(data = df, include = 'VA')+
+  scale_fill_continuous(low = "blue", high = "red", name = "Politican Affiliation")+
+  theme(legend.position = "none")+      
+  ggtitle("Predicted Party Affiliation")
+
+```
+
+
+
+
+
+
+
