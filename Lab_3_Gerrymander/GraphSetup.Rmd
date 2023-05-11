@@ -413,3 +413,24 @@ if (rep > dem) {
   sprintf("Republicans win: %i-%i", rep, dem)
 }
 ```
+
+```{r}
+
+adf = read.csv("/Users/andrewholzwarth/Desktop/DS 3001/lab_3/county_adjacencies (2).csv")
+fips = adf$FIPS
+
+df1 <- vote_df
+df1$X3 <- as.integer(str_replace(df1$X3, "republican", "1"))
+df1$X3 <- as.integer(str_replace(df1$X3, "democrat", "0"))
+df1$X3[is.na(df1$X3)] = 0
+
+df <- data.frame(
+  fips = as.character(fips),
+  values = df1$X3
+) 
+
+plot_usmap(data = df, include = 'VA')+
+  scale_fill_continuous(low = "blue", high = "red", name = "Politican Affiliation", label = scales::comma)+
+  ggtitle("Predicted Party Affiliation")
+
+```
