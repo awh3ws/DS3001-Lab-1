@@ -332,26 +332,26 @@ Adjacent <- read.csv("county_adjacencies.csv")
 ```{r}
 # Wrangle Data
 
-countyPRES <- countyPRES[countyPRES$state_po == "VA",]
+countyPRES <- countyPRES[countyPRES$state_po == "VA",] #Focus only on Virginia
 
-CountyVA <- countyPRES %>%
+CountyVA <- countyPRES %>% #wrangle to sort based on county and party
   group_by(county_name, party) %>%
   summarize(candidatevotes = sum(candidatevotes))
 
 
-CountyVA <- CountyVA %>%
+CountyVA <- CountyVA %>% #edit two columns: round candidate votes and sum the candidate votes
   mutate(candidatevotes = round(candidatevotes, 0),
          totalvotes = sum(candidatevotes))
 
 
-CountyVA <- CountyVA[,c("county_name", "party", "totalvotes", "candidatevotes")]
+CountyVA <- CountyVA[,c("county_name", "party", "totalvotes", "candidatevotes")] #Remove unnecessary variables
 ```
 
 
 ```{r}
 # Which way does each state lean and what is the county population?
 
-df_flipped <- CountyVA %>%
+df_flipped <- CountyVA %>% #pivot wider the data
   pivot_wider( names_from = party, values_from = candidatevotes)
 
 df_flipped <- replace(df_flipped, is.na(df_flipped), 0) # Make NA values 0 because the NA values are for when there are no votes for a party within a specific county
@@ -367,11 +367,11 @@ for (i in 1:nrow(df_flipped)) {
   df_flipped$Prediction[i] <- Prediction # add winning party name to last column
 }
 
-df_flipped <- df_flipped %>%
+df_flipped <- df_flipped %>% #Lower case specific columns to make it easier to merge
   mutate(county_name = tolower(county_name),
          Prediction = tolower(Prediction))
 
-df_flipped <- df_flipped %>%
+df_flipped <- df_flipped %>% 
   mutate(County = str_to_title(county_name) %>% str_replace_all("\\s+", ""))
 
 ```
