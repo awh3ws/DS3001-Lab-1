@@ -430,21 +430,12 @@ df <- data.frame(
   values = df1$X3
 ) 
 
+
 d <-df
-
-for (i in 1:11){
-  for (j in 1:length(districts[[i]])){
-    for (k in 1:length(d$fips)){
-     if(toupper(districts[[i]][[j]]) == gsub(" ", "", votingVA$county_name[k]))
-       districts[[i]][[j]] = votingVA$county_fips[k]
-       
-    }
-  }
-}
-
+d$counties <- counties$County
 for (i in 1:11){
   for (j in 1:length(d$fips)){
-   if (d$fips[j] %in% districts[[i]])
+   if (d$counties[j] %in% districts[[i]])
      d$values[j] = i
     
   }
@@ -452,8 +443,11 @@ for (i in 1:11){
 
 
 d$values <- as.factor(d$values)
-
-
+d$fips[133] <-51199
+d$fips[132] <- 51197
+d$fips[131] <- 51195
+d$fips[130] <- 51840
+d$fips[129] <- 51830
 plot_usmap(data = df, include = 'VA')+
   scale_fill_continuous(low = "blue", high = "red", name = "Politican Affiliation", label = scales::comma)+
   ggtitle("Predicted Party Affiliation")
